@@ -1,0 +1,118 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  AWS_REGION: us-gov-west-1
+
+jobs:
+  build:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push web
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/web
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/kg-${{ github.event.inputs.environment || 'dev' }}/web:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push auth-service
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/auth-service
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/kg-${{ github.event.inputs.environment || 'dev' }}/auth-service:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push graph-service
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/graph-service
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/kg-${{ github.event.inputs.environment || 'dev' }}/graph-service:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push llm-service
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/llm-service
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/kg-${{ github.event.inputs.environment || 'dev' }}/llm-service:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+    outputs:
+      image-tag: ${{ github.sha }}
+
+  deploy:
+    name: Deploy to ECS
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update ECS services
+        run: |
+          CLUSTER="kg-${{ github.event.inputs.environment || 'dev' }}"
+          for SERVICE in web auth-service graph-service llm-service; do
+            echo "Updating service: $SERVICE"
+            aws ecs update-service \
+              --cluster $CLUSTER \
+              --service $SERVICE \
+              --force-new-deployment
+          done
+
+      - name: Wait for deployment
+        run: |
+          CLUSTER="kg-${{ github.event.inputs.environment || 'dev' }}"
+          for SERVICE in web auth-service graph-service llm-service; do
+            echo "Waiting for $SERVICE to stabilize..."
+            aws ecs wait services-stable \
+              --cluster $CLUSTER \
+              --services $SERVICE
+          done

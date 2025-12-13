@@ -1,0 +1,190 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.11'
+  GO_VERSION: '1.22'
+
+jobs:
+  # Frontend tests
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Build
+        run: pnpm build
+
+  # Auth service tests (Go)
+  auth-service:
+    name: Auth Service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: apps/auth-service/go.sum
+
+      - name: Download dependencies
+        working-directory: apps/auth-service
+        run: go mod download
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          working-directory: apps/auth-service
+
+      - name: Test
+        working-directory: apps/auth-service
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Build
+        working-directory: apps/auth-service
+        run: go build -o auth-service .
+
+  # Graph service tests (Python)
+  graph-service:
+    name: Graph Service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        working-directory: apps/graph-service
+        run: |
+          pip install -e ".[dev]"
+
+      - name: Lint
+        working-directory: apps/graph-service
+        run: ruff check .
+
+      - name: Type check
+        working-directory: apps/graph-service
+        run: mypy src
+
+      - name: Test
+        working-directory: apps/graph-service
+        run: pytest --cov=src --cov-report=xml
+
+  # LLM service tests (Python)
+  llm-service:
+    name: LLM Service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        working-directory: apps/llm-service
+        run: |
+          pip install -e ".[dev]"
+
+      - name: Lint
+        working-directory: apps/llm-service
+        run: ruff check .
+
+      - name: Type check
+        working-directory: apps/llm-service
+        run: mypy src
+
+      - name: Test
+        working-directory: apps/llm-service
+        run: pytest --cov=src --cov-report=xml
+
+  # Security scan
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+
+  # CDK tests
+  infrastructure:
+    name: Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        working-directory: infrastructure/cdk
+        run: npm ci
+
+      - name: Build
+        working-directory: infrastructure/cdk
+        run: npm run build
+
+      - name: Synth
+        working-directory: infrastructure/cdk
+        run: npx cdk synth --context environment=dev
