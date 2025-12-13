@@ -1,128 +1,140 @@
-# Architecture Decision Points
+# Architecture Decision Points (Updated for IL6/CMMC)
 
 ## Summary of Proposed Architecture
 
-I've designed a scalable, security-first knowledge graph application. Here are the key decisions that need your input:
+Designed for **CMMC Level 2/3** and **DoD IL6** compliance with AWS GovCloud deployment.
 
 ---
 
-## Technology Choices
+## Technology Choices (IL6 Compliant)
 
 ### Frontend
 | Choice | Recommendation | Alternatives |
 |--------|----------------|--------------|
-| Framework | **Next.js 14** | Remix, SvelteKit |
-| Graph Visualization | **React Flow + D3.js** | Cytoscape.js, vis.js, Sigma.js |
+| Framework | **Next.js 14** | Plain React + Vite |
+| Graph Visualization | **React Flow + D3.js** | Cytoscape.js, vis.js |
 | State Management | **Zustand + TanStack Query** | Redux, Jotai |
 
 ### Backend Services
 | Service | Recommendation | Alternatives |
 |---------|----------------|--------------|
-| Auth Service | **Rust (Axum)** | Go, Node.js |
-| Graph/LLM/CCV Services | **Python (FastAPI)** | Node.js, Go |
-| Message Processing | **Go** | Python, Rust |
+| Auth Service | **Go (Gin/Echo)** | Python, Node.js |
+| Graph/LLM/CCV Services | **Python (FastAPI)** | Node.js |
+| All Services | **ECS Fargate** | ECS on EC2 |
 
-### Data Stores
-| Purpose | Recommendation | Alternatives |
-|---------|----------------|--------------|
-| Graph Database | **Amazon Neptune** | Neo4j (self-hosted), TigerGraph |
-| Vector Search | **OpenSearch + pgvector** | Pinecone, Weaviate, Qdrant |
+### Data Stores (FedRAMP High / GovCloud)
+| Purpose | Recommendation | MVP Alternative |
+|---------|----------------|-----------------|
+| Graph Database | Amazon Neptune | PostgreSQL + Apache AGE |
+| Vector Search | OpenSearch | pgvector extension |
 | Relational | **Aurora PostgreSQL** | RDS PostgreSQL |
-| Cache | **ElastiCache (Redis)** | Memcached |
+| Cache | ElastiCache (Redis) | In-memory (MVP) |
 
-### LLM Strategy
+### LLM Strategy (IL6 - No External APIs)
 | Use Case | Recommendation |
 |----------|----------------|
-| Primary LLM | **Claude via AWS Bedrock** (keeps data in VPC) |
-| Embeddings | **Cohere Embed via Bedrock** |
-| Web Search | **Tavily API** |
-| Fallback | **OpenAI API** |
+| Primary LLM | **Claude 3.5 Sonnet via AWS Bedrock (GovCloud)** |
+| Fast Classification | **Claude 3 Haiku via Bedrock** |
+| Embeddings | **Cohere Embed or Titan via Bedrock** |
+| Web Search | **Not available** (curated knowledge base instead) |
+| Fallback | Self-hosted Llama 3.1 (optional) |
 
 ### Infrastructure
 | Aspect | Recommendation |
 |--------|----------------|
-| Container Orchestration | **EKS (Kubernetes)** |
+| Container Orchestration | **ECS Fargate** (simpler than K8s) |
 | IaC Tool | **AWS CDK (TypeScript)** |
-| CI/CD | **GitHub Actions + ArgoCD** |
+| CI/CD | **GitHub Actions + AWS CodePipeline** |
 | Secrets | **AWS Secrets Manager** |
+| Region | **us-gov-west-1** (GovCloud) |
 
 ---
 
-## Questions Requiring Your Input
+## Confirmed Decisions
+
+Based on your input:
+
+### ✅ Compliance: CMMC + IL6
+- AWS GovCloud required
+- FedRAMP High services only
+- No external API calls (LLM, search, etc.)
+- FIPS 140-2 encryption mandatory
+
+### ✅ LLM: AWS Bedrock Only
+- Claude 3.5 Sonnet for reasoning
+- Claude 3 Haiku for fast tasks
+- Cohere/Titan for embeddings
+- No OpenAI, no Anthropic direct API
+
+### ✅ MVP Data Source: RDS PostgreSQL
+- Start simple with PostgreSQL
+- Can use Apache AGE for graph queries (avoid Neptune cost initially)
+- pgvector for embeddings
+- Single database simplifies MVP
+
+### ✅ Compute: ECS Fargate
+- Simpler than Kubernetes
+- FedRAMP High authorized
+- Available in GovCloud
+- Auto-scaling without cluster management
+
+---
+
+## Remaining Questions
 
 ### 1. Identity Provider
-Which IdP should we integrate with?
-- [ ] AWS Cognito (simplest AWS integration)
-- [ ] Okta (enterprise standard)
-- [ ] Auth0 (developer-friendly)
-- [ ] Existing corporate IdP (specify)
+Which IdP for GovCloud?
+- [ ] **AWS Cognito** (simplest, FedRAMP High in GovCloud)
+- [ ] **Okta** (if already using for DoD/Gov)
+- [ ] **Azure AD** (if hybrid environment)
+- [ ] **SAML/OIDC to existing CAC/PIV** infrastructure
 
-### 2. LLM Provider Restrictions
-Are there constraints on LLM API usage?
-- [ ] AWS Bedrock only (data stays in VPC)
-- [ ] External APIs allowed (OpenAI, Anthropic direct)
-- [ ] On-premise models required (Llama, Mistral)
+### 2. Graph Database Strategy
+Start simple or invest upfront?
+- [ ] **PostgreSQL + Apache AGE** (MVP - lower cost, single DB)
+- [ ] **Neptune from start** (better performance, higher cost ~$400-600/mo)
 
-### 3. Compliance Requirements
-Which compliance frameworks apply?
-- [ ] SOC 2
-- [ ] HIPAA
-- [ ] GDPR
-- [ ] FedRAMP
-- [ ] None specific
+### 3. Auth Service Language
+Team preference for the auth service?
+- [ ] **Go** (good performance, easier than Rust, GovCloud compatible)
+- [ ] **Python** (consistent with other services, slightly slower)
+- [ ] **Node.js** (if team prefers TypeScript everywhere)
 
-### 4. Priority Data Connectors
-Which data sources are highest priority for MVP?
-- [ ] PostgreSQL
-- [ ] MySQL
-- [ ] SQL Server
-- [ ] MongoDB
-- [ ] REST APIs
-- [ ] S3/Data Lake
-- [ ] Other: _______
+### 4. Vector Search Strategy
+- [ ] **pgvector in PostgreSQL** (MVP - simpler, good for <1M vectors)
+- [ ] **OpenSearch** (better for scale, additional cost ~$200-400/mo)
 
-### 5. Team Skills
-What's the team's comfort level with:
-- Rust: [ ] High [ ] Medium [ ] Low [ ] None
-- Go: [ ] High [ ] Medium [ ] Low [ ] None
-- Python: [ ] High [ ] Medium [ ] Low [ ] None
-- TypeScript: [ ] High [ ] Medium [ ] Low [ ] None
-- Kubernetes: [ ] High [ ] Medium [ ] Low [ ] None
-
-### 6. Budget Sensitivity
-Are there budget constraints affecting:
-- [ ] Managed services (Neptune, OpenSearch) vs self-hosted
-- [ ] LLM API costs (may affect model choice)
-- [ ] Multi-AZ/Multi-region requirements
+### 5. Self-Hosted LLM Fallback
+Do you need air-gap capability?
+- [ ] **Yes** - Add Llama 3.1 on EC2 GPU instances
+- [ ] **No** - Bedrock only is sufficient
 
 ---
 
-## Proposed Project Structure
+## Revised Project Structure
 
 ```
 knowledgegraph/
 ├── apps/
 │   ├── web/                    # Next.js frontend
-│   ├── auth-service/           # Rust auth microservice
+│   ├── auth-service/           # Go auth microservice
 │   ├── graph-service/          # Python graph operations
 │   ├── llm-service/            # Python LLM orchestration
 │   ├── ccv-service/            # Python vocabulary management
-│   ├── ingestion-service/      # Python data ingestion
-│   └── connector-service/      # Go data connectors
+│   └── ingestion-service/      # Python data ingestion
 ├── packages/
 │   ├── ui/                     # Shared React components
 │   ├── graph-viz/              # Graph visualization library
-│   ├── auth-client/            # Auth SDK for services
 │   ├── types/                  # Shared TypeScript types
 │   └── python-common/          # Shared Python utilities
 ├── infrastructure/
-│   ├── cdk/                    # AWS CDK stacks
-│   ├── kubernetes/             # K8s manifests (ArgoCD)
-│   └── docker/                 # Dockerfiles
+│   ├── cdk/                    # AWS CDK stacks (GovCloud)
+│   ├── ecs/                    # ECS task definitions
+│   └── docker/                 # Dockerfiles (FIPS base images)
 ├── docs/
 │   ├── ARCHITECTURE.md
-│   ├── API.md
-│   └── DEPLOYMENT.md
+│   ├── ARCHITECTURE_IL6.md
+│   └── DECISION_POINTS.md
 ├── scripts/                    # Development & deployment scripts
 ├── turbo.json                  # Turborepo config
 ├── package.json                # Root package.json
@@ -131,47 +143,73 @@ knowledgegraph/
 
 ---
 
-## Implementation Phases
+## MVP Architecture (Simplified)
 
-### Phase 1: Foundation (Weeks 1-2)
-- Project structure setup
-- Auth service with basic RBAC
-- CDK infrastructure skeleton
-- CI/CD pipeline
-
-### Phase 2: Core Graph (Weeks 3-4)
-- Neptune setup and graph service
-- Basic entity/relationship CRUD
-- Simple frontend with graph viz
-- CCV service foundation
-
-### Phase 3: LLM Integration (Weeks 5-6)
-- LLM service with RAG pipeline
-- Natural language query interface
-- Chat UI integration
-- Web search augmentation
-
-### Phase 4: Data Ingestion (Weeks 7-8)
-- Connector framework
-- First 2-3 data source connectors
-- Entity extraction pipeline
-- Relationship discovery ML
-
-### Phase 5: Polish & Scale (Weeks 9-10)
-- ABAC implementation
-- Performance optimization
-- Advanced visualizations
-- Production hardening
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     AWS GovCloud                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────┐     ┌─────────────────────────────────────┐   │
+│  │   ALB   │────▶│          ECS Fargate               │   │
+│  │  + WAF  │     │                                     │   │
+│  └─────────┘     │  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐  │   │
+│                  │  │ Web │ │Auth │ │Graph│ │ LLM │  │   │
+│                  │  └─────┘ └─────┘ └─────┘ └─────┘  │   │
+│                  └─────────────────────────────────────┘   │
+│                              │                              │
+│                              ▼                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Aurora PostgreSQL                       │   │
+│  │  • Relational data (users, permissions)             │   │
+│  │  • Graph data (Apache AGE extension)                │   │
+│  │  • Vector embeddings (pgvector extension)           │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                              │                              │
+│                              ▼                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              AWS Bedrock (VPC Endpoint)              │   │
+│  │  • Claude 3.5 Sonnet                                │   │
+│  │  • Cohere Embeddings                                │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Ready to Proceed?
+## Cost Estimate (MVP - Monthly)
 
-Once you've reviewed and answered the questions above, I can:
+### Option A: PostgreSQL Only (Simplest)
+| Service | Est. Cost |
+|---------|-----------|
+| ECS Fargate (4 services) | $300-400 |
+| Aurora PostgreSQL (db.r6g.medium) | $300-400 |
+| Bedrock (~500K tokens/day) | $200-300 |
+| ALB + WAF | $100-150 |
+| S3 + CloudTrail | $50-100 |
+| VPC Endpoints (5) | $100-150 |
+| **Total** | **$1,050-1,500/mo** |
 
-1. **Set up the complete project structure** with all boilerplate
-2. **Create the CDK infrastructure** with your AWS preferences
-3. **Build the auth service** with your IdP choice
-4. **Implement the frontend foundation** with graph visualization
+### Option B: With Neptune + OpenSearch
+| Service | Est. Cost |
+|---------|-----------|
+| ECS Fargate (4 services) | $300-400 |
+| Aurora PostgreSQL | $300-400 |
+| Neptune (db.r5.large) | $400-600 |
+| OpenSearch (t3.medium) | $200-300 |
+| Bedrock | $200-300 |
+| ALB + WAF + Endpoints | $250-400 |
+| **Total** | **$1,650-2,400/mo** |
 
-Let me know your preferences and I'll start building!
+---
+
+## Ready to Build
+
+Once you confirm:
+1. **IdP choice** (Cognito recommended for simplicity)
+2. **Graph DB strategy** (PostgreSQL+AGE vs Neptune)
+3. **Auth service language** (Go recommended)
+4. **Self-hosted LLM need** (likely no for MVP)
+
+I'll start building the project structure and infrastructure!
