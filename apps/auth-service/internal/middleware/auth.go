@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/knowledgegraph/auth-service/internal/models"
 	"github.com/knowledgegraph/auth-service/internal/services"
 )
 
@@ -54,7 +55,7 @@ func RequireRole(role string) gin.HandlerFunc {
 			return
 		}
 
-		claims, ok := claimsVal.(*services.TokenClaims)
+		claims, ok := claimsVal.(*models.TokenClaims)
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"error": "Invalid claims",
@@ -92,7 +93,7 @@ func RequirePermission(permission string) gin.HandlerFunc {
 			return
 		}
 
-		claims, ok := claimsVal.(*services.TokenClaims)
+		claims, ok := claimsVal.(*models.TokenClaims)
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"error": "Invalid claims",
@@ -127,5 +128,5 @@ func RequirePermission(permission string) gin.HandlerFunc {
 	}
 }
 
-// TokenClaims is a type alias for the service TokenClaims
-type TokenClaims = services.TokenClaims
+// TokenClaims is a type alias for the models TokenClaims
+type TokenClaims = models.TokenClaims
