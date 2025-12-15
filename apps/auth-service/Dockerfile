@@ -16,7 +16,7 @@ RUN go mod tidy && go mod download
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s" \
     -o /auth-service \
-    ./...
+    .
 
 # Runtime stage - using distroless for security
 FROM gcr.io/distroless/static-debian12:nonroot
