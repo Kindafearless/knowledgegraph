@@ -21,7 +21,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Graph Explorer', href: '/graph', icon: Network },
   { name: 'Data Sources', href: '/data-sources', icon: Database, permission: 'datasource:read' },
-  { name: 'Vocabulary (CCV)', href: '/vocabulary', icon: BookOpen },
+  { name: 'Vocabulary (CCV)', href: '/ccv', icon: BookOpen },
   { name: 'Search', href: '/search', icon: FileSearch },
 ];
 
