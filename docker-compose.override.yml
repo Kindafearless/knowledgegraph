@@ -1,0 +1,63 @@
+# Development overrides for docker-compose
+# This file is automatically loaded alongside docker-compose.yml
+
+version: '3.8'
+
+services:
+  # Enable hot-reload for web frontend in development
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./apps/web/src:/app/src:ro
+      - ./apps/web/public:/app/public:ro
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+
+  # Add debug logging for services
+  auth-service:
+    environment:
+      - LOG_LEVEL=debug
+      - GIN_MODE=debug
+
+  graph-service:
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  llm-service:
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  ccv-service:
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  # Expose pgAdmin for database management (optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: kg-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    profiles:
+      - tools
+
+  # Redis Commander for Redis management (optional)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: kg-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    profiles:
+      - tools

@@ -1,0 +1,181 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: kg-postgres
+    environment:
+      POSTGRES_USER: knowledgegraph
+      POSTGRES_PASSWORD: knowledgegraph_dev
+      POSTGRES_DB: knowledgegraph
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U knowledgegraph"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: kg-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Auth Service (Go)
+  auth-service:
+    build:
+      context: ./apps/auth-service
+      dockerfile: Dockerfile
+    container_name: kg-auth-service
+    environment:
+      - PORT=8080
+      - DATABASE_URL=postgres://knowledgegraph:knowledgegraph_dev@postgres:5432/knowledgegraph?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=dev-jwt-secret-change-in-production
+      - COGNITO_ENABLED=false
+      - ENVIRONMENT=development
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Graph Service (Python)
+  graph-service:
+    build:
+      context: ./apps/graph-service
+      dockerfile: Dockerfile
+    container_name: kg-graph-service
+    environment:
+      - PORT=8001
+      - DATABASE_URL=postgresql+asyncpg://knowledgegraph:knowledgegraph_dev@postgres:5432/knowledgegraph
+      - REDIS_URL=redis://redis:6379
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - ENVIRONMENT=development
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+
+  # LLM Service (Python)
+  llm-service:
+    build:
+      context: ./apps/llm-service
+      dockerfile: Dockerfile
+    container_name: kg-llm-service
+    environment:
+      - PORT=8002
+      - DATABASE_URL=postgresql+asyncpg://knowledgegraph:knowledgegraph_dev@postgres:5432/knowledgegraph
+      - REDIS_URL=redis://redis:6379
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - GRAPH_SERVICE_URL=http://graph-service:8001
+      - ENVIRONMENT=development
+      # For local dev without AWS, use mock mode
+      - LLM_MOCK_MODE=true
+      - AWS_REGION=us-east-1
+    ports:
+      - "8002:8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # CCV Service (Python)
+  ccv-service:
+    build:
+      context: ./apps/ccv-service
+      dockerfile: Dockerfile
+    container_name: kg-ccv-service
+    environment:
+      - PORT=8003
+      - DATABASE_URL=postgresql+asyncpg://knowledgegraph:knowledgegraph_dev@postgres:5432/knowledgegraph
+      - REDIS_URL=redis://redis:6379
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - LLM_SERVICE_URL=http://llm-service:8002
+      - GRAPH_SERVICE_URL=http://graph-service:8001
+      - ENVIRONMENT=development
+      - ENABLE_AUTO_SUGGESTIONS=true
+      - AUTO_APPROVE_THRESHOLD=0.95
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      llm-service:
+        condition: service_started
+
+  # Web Frontend (Next.js)
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8080
+        - NEXT_PUBLIC_GRAPH_SERVICE_URL=http://localhost:8001
+        - NEXT_PUBLIC_LLM_SERVICE_URL=http://localhost:8002
+        - NEXT_PUBLIC_CCV_SERVICE_URL=http://localhost:8003
+        - NEXT_PUBLIC_CCV_WS_URL=ws://localhost:8003
+    container_name: kg-web
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+      - graph-service
+      - llm-service
+      - ccv-service
+
+  # Seed data loader
+  seed:
+    build:
+      context: ./docker/seed
+      dockerfile: Dockerfile
+    container_name: kg-seed
+    environment:
+      - DATABASE_URL=postgresql://knowledgegraph:knowledgegraph_dev@postgres:5432/knowledgegraph
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - GRAPH_SERVICE_URL=http://graph-service:8001
+      - CCV_SERVICE_URL=http://ccv-service:8003
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      graph-service:
+        condition: service_started
+      ccv-service:
+        condition: service_started
+    profiles:
+      - seed
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: knowledgegraph-network
