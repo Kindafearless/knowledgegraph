@@ -14,7 +14,7 @@ import (
 )
 
 type AuthService struct {
-	cognito        *CognitoService
+	authProvider   AuthProvider
 	userRepo       *repository.UserRepository
 	permissionRepo *repository.PermissionRepository
 	sessionRepo    *repository.SessionRepository
@@ -23,7 +23,7 @@ type AuthService struct {
 }
 
 func NewAuthService(
-	cognito *CognitoService,
+	authProvider AuthProvider,
 	userRepo *repository.UserRepository,
 	permissionRepo *repository.PermissionRepository,
 	sessionRepo *repository.SessionRepository,
@@ -31,7 +31,7 @@ func NewAuthService(
 	logger *zap.Logger,
 ) *AuthService {
 	return &AuthService{
-		cognito:        cognito,
+		authProvider:   authProvider,
 		userRepo:       userRepo,
 		permissionRepo: permissionRepo,
 		sessionRepo:    sessionRepo,
@@ -42,28 +42,28 @@ func NewAuthService(
 
 // Login authenticates a user and returns tokens
 func (s *AuthService) Login(ctx context.Context, username, password string) (*LoginResponse, error) {
-	// Authenticate with Cognito
-	authResult, err := s.cognito.AuthenticateUser(ctx, username, password)
+	// Authenticate with auth provider (Cognito or local)
+	authResult, err := s.authProvider.AuthenticateUser(ctx, username, password)
 	if err != nil {
 		s.logger.Warn("Authentication failed", zap.String("username", username), zap.Error(err))
 		return nil, fmt.Errorf("authentication failed: %w", err)
 	}
 
-	// Get user info from Cognito
-	cognitoUser, err := s.cognito.GetUser(ctx, authResult.AccessToken)
+	// Get user info from auth provider
+	authUser, err := s.authProvider.GetUser(ctx, authResult.AccessToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user info: %w", err)
 	}
 
 	// Find or create user in our database
-	user, err := s.userRepo.FindByCognitoSub(ctx, cognitoUser.Sub)
+	user, err := s.userRepo.FindByCognitoSub(ctx, authUser.Sub)
 	if err != nil {
 		// Create new user if not exists
 		user = &models.User{
 			ID:         uuid.New(),
-			CognitoSub: cognitoUser.Sub,
-			Email:      cognitoUser.Email,
-			Name:       cognitoUser.Name,
+			CognitoSub: authUser.Sub,
+			Email:      authUser.Email,
+			Name:       authUser.Name,
 			Roles:      []string{"viewer"}, // Default role
 			Attributes: make(map[string]string),
 			IsActive:   true,
@@ -125,9 +125,9 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*Lo
 
 // Logout invalidates a user's session
 func (s *AuthService) Logout(ctx context.Context, accessToken string) error {
-	// Revoke Cognito token
-	if err := s.cognito.GlobalSignOut(ctx, accessToken); err != nil {
-		s.logger.Warn("Failed to sign out from Cognito", zap.Error(err))
+	// Revoke token via auth provider
+	if err := s.authProvider.GlobalSignOut(ctx, accessToken); err != nil {
+		s.logger.Warn("Failed to sign out from auth provider", zap.Error(err))
 	}
 
 	// Delete session from Redis
@@ -140,18 +140,18 @@ func (s *AuthService) Logout(ctx context.Context, accessToken string) error {
 
 // RefreshToken refreshes the access token
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*LoginResponse, error) {
-	authResult, err := s.cognito.RefreshToken(ctx, refreshToken)
+	authResult, err := s.authProvider.RefreshToken(ctx, refreshToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh token: %w", err)
 	}
 
 	// Get user info
-	cognitoUser, err := s.cognito.GetUser(ctx, authResult.AccessToken)
+	authUser, err := s.authProvider.GetUser(ctx, authResult.AccessToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user info: %w", err)
 	}
 
-	user, err := s.userRepo.FindByCognitoSub(ctx, cognitoUser.Sub)
+	user, err := s.userRepo.FindByCognitoSub(ctx, authUser.Sub)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}

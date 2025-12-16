@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -45,7 +43,7 @@ services:
       - DATABASE_URL=postgres://knowledgegraph:knowledgegraph_dev@postgres:5432/knowledgegraph?sslmode=disable
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=dev-jwt-secret-change-in-production
-      - COGNITO_ENABLED=false
+      - LOCAL_MODE=true
       - ENVIRONMENT=development
     ports:
       - "8080:8080"
@@ -142,7 +140,7 @@ services:
     environment:
       - NODE_ENV=development
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       - auth-service
       - graph-service

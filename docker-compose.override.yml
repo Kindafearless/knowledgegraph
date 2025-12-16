@@ -1,8 +1,6 @@
 # Development overrides for docker-compose
 # This file is automatically loaded alongside docker-compose.yml
 
-version: '3.8'
-
 services:
   # Enable hot-reload for web frontend in development
   web:

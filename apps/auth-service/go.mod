@@ -12,4 +12,5 @@ require (
 	github.com/jackc/pgx/v5 v5.5.1
 	github.com/redis/go-redis/v9 v9.4.0
 	go.uber.org/zap v1.26.0
+	golang.org/x/crypto v0.18.0
 )

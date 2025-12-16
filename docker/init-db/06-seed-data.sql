@@ -69,11 +69,12 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
 ON CONFLICT DO NOTHING;
 
 -- Test Users (password is 'password123' hashed with bcrypt)
-INSERT INTO users (id, email, name, password_hash, classification_level, organization, department, is_active) VALUES
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'admin@example.com', 'Admin User', '$2a$10$rQEY7qXWwV6v7F9v9VJW8eMxwvS3FYr6dOJMBjLhBm5mH5q5hqZGe', 'secret', 'Acme Corp', 'IT', true),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'analyst@example.com', 'Data Analyst', '$2a$10$rQEY7qXWwV6v7F9v9VJW8eMxwvS3FYr6dOJMBjLhBm5mH5q5hqZGe', 'confidential', 'Acme Corp', 'Analytics', true),
-    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'viewer@example.com', 'Report Viewer', '$2a$10$rQEY7qXWwV6v7F9v9VJW8eMxwvS3FYr6dOJMBjLhBm5mH5q5hqZGe', 'unclassified', 'Acme Corp', 'Operations', true),
-    ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'steward@example.com', 'Data Steward', '$2a$10$rQEY7qXWwV6v7F9v9VJW8eMxwvS3FYr6dOJMBjLhBm5mH5q5hqZGe', 'secret', 'Acme Corp', 'Data Governance', true)
+-- cognito_sub is set to user ID for local authentication compatibility
+INSERT INTO users (id, cognito_sub, email, name, password_hash, classification_level, organization, department, is_active) VALUES
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'admin@example.com', 'Admin User', '$2a$10$rQEY7qXWwV6v7F9v9VJW8eMxwvS3FYr6dOJMBjLhBm5mH5q5hqZGe', 'secret', 'Acme Corp', 'IT', true),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'analyst@example.com', 'Data Analyst', '$2a$10$rQEY7qXWwV6v7F9v9VJW8eMxwvS3FYr6dOJMBjLhBm5mH5q5hqZGe', 'confidential', 'Acme Corp', 'Analytics', true),
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'viewer@example.com', 'Report Viewer', '$2a$10$rQEY7qXWwV6v7F9v9VJW8eMxwvS3FYr6dOJMBjLhBm5mH5q5hqZGe', 'unclassified', 'Acme Corp', 'Operations', true),
+    ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'steward@example.com', 'Data Steward', '$2a$10$rQEY7qXWwV6v7F9v9VJW8eMxwvS3FYr6dOJMBjLhBm5mH5q5hqZGe', 'secret', 'Acme Corp', 'Data Governance', true)
 ON CONFLICT (email) DO NOTHING;
 
 -- Assign roles to users

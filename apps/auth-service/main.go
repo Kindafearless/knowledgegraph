@@ -52,14 +52,21 @@ func main() {
 	permissionRepo := repository.NewPermissionRepository(db)
 	sessionRepo := repository.NewSessionRepository(redisClient)
 
-	// Initialize services
-	cognitoService, err := services.NewCognitoService(cfg)
-	if err != nil {
-		logger.Fatal("Failed to initialize Cognito service", zap.Error(err))
+	// Initialize auth provider based on mode
+	var authProvider services.AuthProvider
+	if cfg.LocalMode {
+		logger.Info("Running in LOCAL MODE - using database authentication")
+		authProvider = services.NewLocalAuthProvider(db)
+	} else {
+		cognitoService, err := services.NewCognitoService(cfg)
+		if err != nil {
+			logger.Fatal("Failed to initialize Cognito service", zap.Error(err))
+		}
+		authProvider = cognitoService
 	}
 
 	authService := services.NewAuthService(
-		cognitoService,
+		authProvider,
 		userRepo,
 		permissionRepo,
 		sessionRepo,
