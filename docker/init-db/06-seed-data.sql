@@ -4,12 +4,20 @@
 -- AUTH SERVICE SEED DATA
 -- ============================================
 
--- Default Roles
-INSERT INTO roles (id, name, description, is_system) VALUES
-    ('11111111-1111-1111-1111-111111111111', 'admin', 'Full system administrator', true),
-    ('22222222-2222-2222-2222-222222222222', 'analyst', 'Data analyst with read/write access', true),
-    ('33333333-3333-3333-3333-333333333333', 'viewer', 'Read-only access', true),
-    ('44444444-4444-4444-4444-444444444444', 'data_steward', 'Manages data sources and vocabulary', true)
+-- Default Roles (with denormalized permissions for Go auth service)
+INSERT INTO roles (id, name, description, permissions, inherits, is_system) VALUES
+    ('11111111-1111-1111-1111-111111111111', 'admin', 'Full system administrator',
+     ARRAY['*', 'user:read', 'user:write', 'user:delete', 'datasource:read', 'datasource:write', 'datasource:delete', 'entity:read', 'entity:write', 'entity:delete', 'ccv:read', 'ccv:write', 'ccv:approve', 'settings:read', 'settings:write', 'permissions:read'],
+     ARRAY[]::UUID[], true),
+    ('22222222-2222-2222-2222-222222222222', 'analyst', 'Data analyst with read/write access',
+     ARRAY['datasource:read', 'entity:read', 'entity:write', 'ccv:read', 'ccv:write'],
+     ARRAY[]::UUID[], true),
+    ('33333333-3333-3333-3333-333333333333', 'viewer', 'Read-only access',
+     ARRAY['datasource:read', 'entity:read', 'ccv:read'],
+     ARRAY[]::UUID[], true),
+    ('44444444-4444-4444-4444-444444444444', 'data_steward', 'Manages data sources and vocabulary',
+     ARRAY['datasource:read', 'datasource:write', 'entity:read', 'entity:write', 'ccv:read', 'ccv:write', 'ccv:approve'],
+     ARRAY[]::UUID[], true)
 ON CONFLICT (name) DO NOTHING;
 
 -- Default Permissions

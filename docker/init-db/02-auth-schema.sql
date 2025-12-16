@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS roles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
+    -- Denormalized columns for Go auth service queries
+    permissions TEXT[] DEFAULT '{}',
+    inherits UUID[] DEFAULT '{}',
     is_system BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
