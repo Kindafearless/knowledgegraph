@@ -284,93 +284,93 @@ ON CONFLICT DO NOTHING;
 
 -- Root level domains
 INSERT INTO ccv_terms (id, canonical_name, definition, domain, status, source, confidence) VALUES
-    ('t0000000-0000-0000-0000-000000000001', 'Security', 'Information security domain', NULL, 'approved', 'manual', 1.0),
-    ('t0000000-0000-0000-0000-000000000002', 'Compliance', 'Regulatory compliance domain', NULL, 'approved', 'manual', 1.0),
-    ('t0000000-0000-0000-0000-000000000003', 'Technology', 'Technology and systems domain', NULL, 'approved', 'manual', 1.0),
-    ('t0000000-0000-0000-0000-000000000004', 'Organization', 'Organizational structure domain', NULL, 'approved', 'manual', 1.0)
+    ('a0000000-0000-0000-0000-000000000001', 'Security', 'Information security domain', NULL, 'approved', 'manual', 1.0),
+    ('a0000000-0000-0000-0000-000000000002', 'Compliance', 'Regulatory compliance domain', NULL, 'approved', 'manual', 1.0),
+    ('a0000000-0000-0000-0000-000000000003', 'Technology', 'Technology and systems domain', NULL, 'approved', 'manual', 1.0),
+    ('a0000000-0000-0000-0000-000000000004', 'Organization', 'Organizational structure domain', NULL, 'approved', 'manual', 1.0)
 ON CONFLICT DO NOTHING;
 
 -- Security sub-terms
 INSERT INTO ccv_terms (id, canonical_name, definition, domain, parent_id, status, source, confidence, usage_count) VALUES
-    ('t0000000-0000-0000-0001-000000000001', 'Access Control', 'Mechanisms to restrict system access to authorized users', 'security',
-     't0000000-0000-0000-0000-000000000001', 'approved', 'manual', 1.0, 15),
-    ('t0000000-0000-0000-0001-000000000002', 'Authentication', 'Process of verifying user identity', 'security',
-     't0000000-0000-0000-0001-000000000001', 'approved', 'manual', 1.0, 23),
-    ('t0000000-0000-0000-0001-000000000003', 'Authorization', 'Process of granting permissions to authenticated users', 'security',
-     't0000000-0000-0000-0001-000000000001', 'approved', 'manual', 1.0, 18),
-    ('t0000000-0000-0000-0001-000000000004', 'Multi-Factor Authentication', 'Authentication requiring multiple verification methods', 'security',
-     't0000000-0000-0000-0001-000000000002', 'approved', 'manual', 1.0, 12),
-    ('t0000000-0000-0000-0001-000000000005', 'Encryption', 'Process of encoding data to prevent unauthorized access', 'security',
-     't0000000-0000-0000-0000-000000000001', 'approved', 'manual', 1.0, 20),
-    ('t0000000-0000-0000-0001-000000000006', 'Data at Rest Encryption', 'Encryption of stored data', 'security',
-     't0000000-0000-0000-0001-000000000005', 'approved', 'manual', 1.0, 8),
-    ('t0000000-0000-0000-0001-000000000007', 'Data in Transit Encryption', 'Encryption of data during transmission', 'security',
-     't0000000-0000-0000-0001-000000000005', 'approved', 'manual', 1.0, 10),
-    ('t0000000-0000-0000-0001-000000000008', 'Zero Trust', 'Security model that requires verification for all access attempts', 'security',
-     't0000000-0000-0000-0000-000000000001', 'approved', 'auto_extracted', 0.95, 7),
-    ('t0000000-0000-0000-0001-000000000009', 'Audit Logging', 'Recording of security-relevant events', 'security',
-     't0000000-0000-0000-0000-000000000001', 'approved', 'manual', 1.0, 14),
-    ('t0000000-0000-0000-0001-000000000010', 'Vulnerability Management', 'Process of identifying and mitigating security vulnerabilities', 'security',
-     't0000000-0000-0000-0000-000000000001', 'approved', 'manual', 1.0, 9)
+    ('a0000000-0000-0000-0001-000000000001', 'Access Control', 'Mechanisms to restrict system access to authorized users', 'security',
+     'a0000000-0000-0000-0000-000000000001', 'approved', 'manual', 1.0, 15),
+    ('a0000000-0000-0000-0001-000000000002', 'Authentication', 'Process of verifying user identity', 'security',
+     'a0000000-0000-0000-0001-000000000001', 'approved', 'manual', 1.0, 23),
+    ('a0000000-0000-0000-0001-000000000003', 'Authorization', 'Process of granting permissions to authenticated users', 'security',
+     'a0000000-0000-0000-0001-000000000001', 'approved', 'manual', 1.0, 18),
+    ('a0000000-0000-0000-0001-000000000004', 'Multi-Factor Authentication', 'Authentication requiring multiple verification methods', 'security',
+     'a0000000-0000-0000-0001-000000000002', 'approved', 'manual', 1.0, 12),
+    ('a0000000-0000-0000-0001-000000000005', 'Encryption', 'Process of encoding data to prevent unauthorized access', 'security',
+     'a0000000-0000-0000-0000-000000000001', 'approved', 'manual', 1.0, 20),
+    ('a0000000-0000-0000-0001-000000000006', 'Data at Rest Encryption', 'Encryption of stored data', 'security',
+     'a0000000-0000-0000-0001-000000000005', 'approved', 'manual', 1.0, 8),
+    ('a0000000-0000-0000-0001-000000000007', 'Data in Transit Encryption', 'Encryption of data during transmission', 'security',
+     'a0000000-0000-0000-0001-000000000005', 'approved', 'manual', 1.0, 10),
+    ('a0000000-0000-0000-0001-000000000008', 'Zero Trust', 'Security model that requires verification for all access attempts', 'security',
+     'a0000000-0000-0000-0000-000000000001', 'approved', 'auto_extracted', 0.95, 7),
+    ('a0000000-0000-0000-0001-000000000009', 'Audit Logging', 'Recording of security-relevant events', 'security',
+     'a0000000-0000-0000-0000-000000000001', 'approved', 'manual', 1.0, 14),
+    ('a0000000-0000-0000-0001-000000000010', 'Vulnerability Management', 'Process of identifying and mitigating security vulnerabilities', 'security',
+     'a0000000-0000-0000-0000-000000000001', 'approved', 'manual', 1.0, 9)
 ON CONFLICT DO NOTHING;
 
 -- Compliance sub-terms
 INSERT INTO ccv_terms (id, canonical_name, definition, domain, parent_id, status, source, confidence, usage_count) VALUES
-    ('t0000000-0000-0000-0002-000000000001', 'CMMC', 'Cybersecurity Maturity Model Certification', 'compliance',
-     't0000000-0000-0000-0000-000000000002', 'approved', 'manual', 1.0, 25),
-    ('t0000000-0000-0000-0002-000000000002', 'NIST 800-53', 'Security and Privacy Controls for Information Systems', 'compliance',
-     't0000000-0000-0000-0000-000000000002', 'approved', 'manual', 1.0, 30),
-    ('t0000000-0000-0000-0002-000000000003', 'FedRAMP', 'Federal Risk and Authorization Management Program', 'compliance',
-     't0000000-0000-0000-0000-000000000002', 'approved', 'manual', 1.0, 18),
-    ('t0000000-0000-0000-0002-000000000004', 'IL6', 'Impact Level 6 - Classified information up to Secret', 'compliance',
-     't0000000-0000-0000-0000-000000000002', 'approved', 'manual', 1.0, 12),
-    ('t0000000-0000-0000-0002-000000000005', 'FIPS 140-2', 'Federal Information Processing Standard for cryptographic modules', 'compliance',
-     't0000000-0000-0000-0000-000000000002', 'approved', 'manual', 1.0, 15)
+    ('a0000000-0000-0000-0002-000000000001', 'CMMC', 'Cybersecurity Maturity Model Certification', 'compliance',
+     'a0000000-0000-0000-0000-000000000002', 'approved', 'manual', 1.0, 25),
+    ('a0000000-0000-0000-0002-000000000002', 'NIST 800-53', 'Security and Privacy Controls for Information Systems', 'compliance',
+     'a0000000-0000-0000-0000-000000000002', 'approved', 'manual', 1.0, 30),
+    ('a0000000-0000-0000-0002-000000000003', 'FedRAMP', 'Federal Risk and Authorization Management Program', 'compliance',
+     'a0000000-0000-0000-0000-000000000002', 'approved', 'manual', 1.0, 18),
+    ('a0000000-0000-0000-0002-000000000004', 'IL6', 'Impact Level 6 - Classified information up to Secret', 'compliance',
+     'a0000000-0000-0000-0000-000000000002', 'approved', 'manual', 1.0, 12),
+    ('a0000000-0000-0000-0002-000000000005', 'FIPS 140-2', 'Federal Information Processing Standard for cryptographic modules', 'compliance',
+     'a0000000-0000-0000-0000-000000000002', 'approved', 'manual', 1.0, 15)
 ON CONFLICT DO NOTHING;
 
 -- Technology sub-terms
 INSERT INTO ccv_terms (id, canonical_name, definition, domain, parent_id, status, source, confidence, usage_count) VALUES
-    ('t0000000-0000-0000-0003-000000000001', 'Cloud Computing', 'On-demand delivery of IT resources over the internet', 'technical',
-     't0000000-0000-0000-0000-000000000003', 'approved', 'manual', 1.0, 22),
-    ('t0000000-0000-0000-0003-000000000002', 'Container Orchestration', 'Automated management of containerized applications', 'technical',
-     't0000000-0000-0000-0000-000000000003', 'approved', 'manual', 1.0, 15),
-    ('t0000000-0000-0000-0003-000000000003', 'Infrastructure as Code', 'Managing infrastructure through machine-readable files', 'technical',
-     't0000000-0000-0000-0000-000000000003', 'approved', 'manual', 1.0, 12),
-    ('t0000000-0000-0000-0003-000000000004', 'Relational Database', 'Database organized into tables with defined relationships', 'technical',
-     't0000000-0000-0000-0000-000000000003', 'approved', 'manual', 1.0, 18),
-    ('t0000000-0000-0000-0003-000000000005', 'Machine Learning', 'AI systems that learn from data', 'technical',
-     't0000000-0000-0000-0000-000000000003', 'approved', 'auto_extracted', 0.92, 8)
+    ('a0000000-0000-0000-0003-000000000001', 'Cloud Computing', 'On-demand delivery of IT resources over the internet', 'technical',
+     'a0000000-0000-0000-0000-000000000003', 'approved', 'manual', 1.0, 22),
+    ('a0000000-0000-0000-0003-000000000002', 'Container Orchestration', 'Automated management of containerized applications', 'technical',
+     'a0000000-0000-0000-0000-000000000003', 'approved', 'manual', 1.0, 15),
+    ('a0000000-0000-0000-0003-000000000003', 'Infrastructure as Code', 'Managing infrastructure through machine-readable files', 'technical',
+     'a0000000-0000-0000-0000-000000000003', 'approved', 'manual', 1.0, 12),
+    ('a0000000-0000-0000-0003-000000000004', 'Relational Database', 'Database organized into tables with defined relationships', 'technical',
+     'a0000000-0000-0000-0000-000000000003', 'approved', 'manual', 1.0, 18),
+    ('a0000000-0000-0000-0003-000000000005', 'Machine Learning', 'AI systems that learn from data', 'technical',
+     'a0000000-0000-0000-0000-000000000003', 'approved', 'auto_extracted', 0.92, 8)
 ON CONFLICT DO NOTHING;
 
 -- CCV Synonyms
 INSERT INTO ccv_synonyms (id, term_id, synonym, source, confidence, status) VALUES
-    ('s0000000-0000-0000-0000-000000000001', 't0000000-0000-0000-0001-000000000004', 'MFA', 'manual', 1.0, 'approved'),
-    ('s0000000-0000-0000-0000-000000000002', 't0000000-0000-0000-0001-000000000004', '2FA', 'manual', 0.9, 'approved'),
-    ('s0000000-0000-0000-0000-000000000003', 't0000000-0000-0000-0001-000000000004', 'Two-Factor Authentication', 'manual', 0.95, 'approved'),
-    ('s0000000-0000-0000-0000-000000000004', 't0000000-0000-0000-0001-000000000008', 'ZTA', 'auto_extracted', 0.9, 'approved'),
-    ('s0000000-0000-0000-0000-000000000005', 't0000000-0000-0000-0001-000000000008', 'Zero Trust Architecture', 'manual', 1.0, 'approved'),
-    ('s0000000-0000-0000-0000-000000000006', 't0000000-0000-0000-0003-000000000003', 'IaC', 'manual', 1.0, 'approved'),
-    ('s0000000-0000-0000-0000-000000000007', 't0000000-0000-0000-0002-000000000001', 'Cybersecurity Maturity Model', 'manual', 0.95, 'approved'),
-    ('s0000000-0000-0000-0000-000000000008', 't0000000-0000-0000-0003-000000000005', 'ML', 'manual', 1.0, 'approved'),
-    ('s0000000-0000-0000-0000-000000000009', 't0000000-0000-0000-0003-000000000005', 'AI', 'auto_extracted', 0.85, 'approved')
+    ('50000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0001-000000000004', 'MFA', 'manual', 1.0, 'approved'),
+    ('50000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0001-000000000004', '2FA', 'manual', 0.9, 'approved'),
+    ('50000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0001-000000000004', 'Two-Factor Authentication', 'manual', 0.95, 'approved'),
+    ('50000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0001-000000000008', 'ZTA', 'auto_extracted', 0.9, 'approved'),
+    ('50000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0001-000000000008', 'Zero Trust Architecture', 'manual', 1.0, 'approved'),
+    ('50000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0003-000000000003', 'IaC', 'manual', 1.0, 'approved'),
+    ('50000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0002-000000000001', 'Cybersecurity Maturity Model', 'manual', 0.95, 'approved'),
+    ('50000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0003-000000000005', 'ML', 'manual', 1.0, 'approved'),
+    ('50000000-0000-0000-0000-000000000009', 'a0000000-0000-0000-0003-000000000005', 'AI', 'auto_extracted', 0.85, 'approved')
 ON CONFLICT DO NOTHING;
 
 -- CCV Suggestions (pending review)
 INSERT INTO ccv_suggestions (id, suggestion_type, status, confidence, suggested_value, context, term_id, llm_reasoning) VALUES
-    ('sg000000-0000-0000-0000-000000000001', 'new_term', 'pending', 0.88, 'DevSecOps',
+    ('56000000-0000-0000-0000-000000000001', 'new_term', 'pending', 0.88, 'DevSecOps',
      'Extracted from project documentation', NULL,
      'Term appears frequently in security and development contexts, combining DevOps with security practices'),
-    ('sg000000-0000-0000-0000-000000000002', 'synonym', 'pending', 0.82, 'K8s',
-     'Common abbreviation found in technical docs', 't0000000-0000-0000-0003-000000000002',
+    ('56000000-0000-0000-0000-000000000002', 'synonym', 'pending', 0.82, 'K8s',
+     'Common abbreviation found in technical docs', 'a0000000-0000-0000-0003-000000000002',
      'Widely used abbreviation for Kubernetes in technical documentation'),
-    ('sg000000-0000-0000-0000-000000000003', 'new_term', 'pending', 0.75, 'Service Mesh',
+    ('56000000-0000-0000-0000-000000000003', 'new_term', 'pending', 0.75, 'Service Mesh',
      'Referenced in cloud architecture documents', NULL,
      'Infrastructure layer for managing service-to-service communication'),
-    ('sg000000-0000-0000-0000-000000000004', 'definition', 'pending', 0.9, 'A distributed system for managing containerized workloads and services',
-     'Definition update suggestion', 't0000000-0000-0000-0003-000000000002',
+    ('56000000-0000-0000-0000-000000000004', 'definition', 'pending', 0.9, 'A distributed system for managing containerized workloads and services',
+     'Definition update suggestion', 'a0000000-0000-0000-0003-000000000002',
      'More comprehensive definition based on official documentation'),
-    ('sg000000-0000-0000-0000-000000000005', 'hierarchy', 'pending', 0.85, 'Move under Cloud Computing',
-     'Hierarchy reorganization', 't0000000-0000-0000-0003-000000000002',
+    ('56000000-0000-0000-0000-000000000005', 'hierarchy', 'pending', 0.85, 'Move under Cloud Computing',
+     'Hierarchy reorganization', 'a0000000-0000-0000-0003-000000000002',
      'Container orchestration is typically a cloud computing concept')
 ON CONFLICT DO NOTHING;
 
@@ -380,35 +380,35 @@ ON CONFLICT DO NOTHING;
 
 -- LLM Prompt Templates
 INSERT INTO llm_prompts (id, name, description, prompt_template, variables, model, temperature, max_tokens, is_active) VALUES
-    ('p0000000-0000-0000-0000-000000000001', 'entity_analysis', 'Analyze an entity and suggest relationships',
+    ('b0000000-0000-0000-0000-000000000001', 'entity_analysis', 'Analyze an entity and suggest relationships',
      'Analyze the following entity and suggest potential relationships to other entities in the knowledge graph:\n\nEntity: {{entity_name}}\nType: {{entity_type}}\nProperties: {{properties}}\n\nProvide suggestions in JSON format.',
      '["entity_name", "entity_type", "properties"]', 'claude-3-sonnet', 0.7, 2000, true),
-    ('p0000000-0000-0000-0000-000000000002', 'term_extraction', 'Extract canonical terms from text',
+    ('b0000000-0000-0000-0000-000000000002', 'term_extraction', 'Extract canonical terms from text',
      'Extract key terms from the following text that should be added to our canonical vocabulary:\n\nText: {{text}}\nDomain: {{domain}}\n\nFor each term provide: canonical name, definition, synonyms, and confidence score.',
      '["text", "domain"]', 'claude-3-haiku', 0.5, 1500, true),
-    ('p0000000-0000-0000-0000-000000000003', 'query_intent', 'Classify user query intent',
+    ('b0000000-0000-0000-0000-000000000003', 'query_intent', 'Classify user query intent',
      'Classify the intent of the following user query about a knowledge graph:\n\nQuery: {{query}}\n\nCategories: search, explore, analyze, create, update, explain\n\nProvide the intent and extracted entities.',
      '["query"]', 'claude-3-haiku', 0.3, 500, true)
 ON CONFLICT (name) DO NOTHING;
 
 -- Sample Chat Session
 INSERT INTO chat_sessions (id, user_id, title, context_type, is_active) VALUES
-    ('cs000000-0000-0000-0000-000000000001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    ('c5000000-0000-0000-0000-000000000001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
      'Cloud Migration Analysis', 'graph_exploration', true)
 ON CONFLICT DO NOTHING;
 
 -- Sample Chat Messages
 INSERT INTO chat_messages (id, session_id, role, content, intent, created_at) VALUES
-    ('cm000000-0000-0000-0000-000000000001', 'cs000000-0000-0000-0000-000000000001',
+    ('c3000000-0000-0000-0000-000000000001', 'c5000000-0000-0000-0000-000000000001',
      'user', 'What technologies are being used in the Cloud Migration Initiative?', 'search',
      NOW() - INTERVAL '1 hour'),
-    ('cm000000-0000-0000-0000-000000000002', 'cs000000-0000-0000-0000-000000000001',
+    ('c3000000-0000-0000-0000-000000000002', 'c5000000-0000-0000-0000-000000000001',
      'assistant', 'The Cloud Migration Initiative is using several key technologies:\n\n1. **AWS GovCloud** - The primary cloud platform\n2. **Kubernetes** - For container orchestration\n3. **Terraform** - For infrastructure as code\n\nThese technologies were chosen to support the IL6 compliance requirements while enabling modern cloud-native development practices.',
      NULL, NOW() - INTERVAL '59 minutes'),
-    ('cm000000-0000-0000-0000-000000000003', 'cs000000-0000-0000-0000-000000000001',
+    ('c3000000-0000-0000-0000-000000000003', 'c5000000-0000-0000-0000-000000000001',
      'user', 'Who is leading this project?', 'search',
      NOW() - INTERVAL '55 minutes'),
-    ('cm000000-0000-0000-0000-000000000004', 'cs000000-0000-0000-0000-000000000001',
+    ('c3000000-0000-0000-0000-000000000004', 'c5000000-0000-0000-0000-000000000001',
      'assistant', 'The Cloud Migration Initiative has two key leaders:\n\n1. **Alice Johnson** (VP of Engineering) - Project Sponsor\n2. **David Brown** (Project Manager) - Day-to-day project management\n\nAlice provides executive oversight while David manages the tactical execution of the migration plan.',
      NULL, NOW() - INTERVAL '54 minutes')
 ON CONFLICT DO NOTHING;
