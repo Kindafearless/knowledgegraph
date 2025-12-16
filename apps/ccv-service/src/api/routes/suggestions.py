@@ -177,8 +177,8 @@ async def approve_suggestion(
 async def reject_suggestion(
     request: Request,
     suggestion_id: UUID,
-    notes: str | None = None,
     service: Annotated[SuggestionService, Depends(get_suggestion_service)],
+    notes: str | None = None,
 ) -> CCVSuggestion:
     """Quick reject a suggestion."""
     user_id = getattr(request.state, "user_id", None)
