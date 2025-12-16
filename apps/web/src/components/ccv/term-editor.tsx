@@ -14,6 +14,7 @@ import {
   useSimilarTerms,
 } from '@/hooks/use-ccv';
 import { CCVTerm, CCVSynonym, SimilarTerm } from '@/lib/api/ccv';
+import { LinkedEntities } from './linked-entities';
 
 interface TermEditorProps {
   termId?: string | null;
@@ -381,6 +382,11 @@ export function TermEditor({ termId, isOpen, onClose, onSaved }: TermEditorProps
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* Linked Entities (only when editing) */}
+              {isEditing && termId && (
+                <LinkedEntities termId={termId} />
               )}
             </div>
           )}

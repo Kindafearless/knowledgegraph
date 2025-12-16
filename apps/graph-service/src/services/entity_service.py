@@ -249,6 +249,91 @@ class EntityService:
         logger.info("Entity deleted", entity_id=str(entity_id))
         return True
 
+    async def get_entities_by_ccv_term(
+        self,
+        term_id: UUID,
+        mapping_type: str | None = None,
+        min_confidence: float = 0.0,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> list[dict]:
+        """Get entities linked to a CCV term via ccv_entity_mappings.
+
+        Args:
+            term_id: CCV term UUID
+            mapping_type: Filter by mapping type (exact, broad, narrow, related)
+            min_confidence: Minimum confidence score for mappings
+            page, page_size: Pagination
+
+        Returns:
+            List of entities with their mapping details
+        """
+        offset = (page - 1) * page_size
+
+        query = """
+            SELECT
+                e.id,
+                e.name,
+                et.name as type,
+                e.properties,
+                ds.name as data_source,
+                e.classification_level as classification,
+                e.created_at,
+                e.updated_at,
+                cem.mapping_type,
+                cem.confidence as mapping_confidence,
+                cem.is_verified
+            FROM entities e
+            LEFT JOIN entity_types et ON e.type_id = et.id
+            LEFT JOIN data_sources ds ON e.data_source_id = ds.id
+            JOIN ccv_entity_mappings cem ON e.id = cem.entity_id
+            WHERE cem.term_id = :term_id
+            AND cem.confidence >= :min_confidence
+        """
+        params: dict[str, Any] = {
+            "term_id": term_id,
+            "min_confidence": min_confidence,
+            "limit": page_size,
+            "offset": offset,
+        }
+
+        if mapping_type:
+            query += " AND cem.mapping_type = :mapping_type"
+            params["mapping_type"] = mapping_type
+
+        query += " ORDER BY cem.confidence DESC, e.created_at DESC LIMIT :limit OFFSET :offset"
+
+        result = await self.session.execute(text(query), params)
+        rows = result.fetchall()
+
+        return [
+            {
+                "entity": Entity(
+                    id=row.id,
+                    name=row.name,
+                    type=row.type or "Unknown",
+                    properties=row.properties or {},
+                    data_source=row.data_source,
+                    classification=row.classification or "unclassified",
+                    created_at=row.created_at,
+                    updated_at=row.updated_at,
+                ),
+                "mapping_type": row.mapping_type,
+                "mapping_confidence": row.mapping_confidence,
+                "is_verified": row.is_verified,
+            }
+            for row in rows
+        ]
+
+    async def count_entities_by_ccv_term(self, term_id: UUID) -> int:
+        """Count entities linked to a CCV term."""
+        query = """
+            SELECT COUNT(*) FROM ccv_entity_mappings
+            WHERE term_id = :term_id
+        """
+        result = await self.session.execute(text(query), {"term_id": term_id})
+        return result.scalar() or 0
+
     async def get_entity_relationships(
         self,
         entity_id: UUID,

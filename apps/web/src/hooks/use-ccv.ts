@@ -252,3 +252,20 @@ export function useAnalyzeCoverage() {
     mutationFn: ccvApi.analyzeVocabularyCoverage,
   });
 }
+
+// Linked Entities Hooks
+export function useLinkedEntities(
+  termId: string,
+  options?: {
+    page?: number;
+    pageSize?: number;
+    mappingType?: string;
+    minConfidence?: number;
+  }
+) {
+  return useQuery({
+    queryKey: [...ccvKeys.term(termId), 'linked-entities', options],
+    queryFn: () => ccvApi.getEntitiesByTerm(termId, options),
+    enabled: !!termId,
+  });
+}

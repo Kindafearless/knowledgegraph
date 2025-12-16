@@ -323,3 +323,49 @@ export async function analyzeVocabularyCoverage(data: {
   if (!response.ok) throw new Error('Failed to analyze coverage');
   return response.json();
 }
+
+// Entity mapping types
+export interface LinkedEntity {
+  entity: {
+    id: string;
+    name: string;
+    type: string;
+    properties: Record<string, unknown>;
+    data_source: string | null;
+    classification: string;
+    created_at: string;
+    updated_at: string;
+  };
+  mapping_type: 'exact' | 'broad' | 'narrow' | 'related';
+  mapping_confidence: number;
+  is_verified: boolean;
+}
+
+export interface LinkedEntitiesResponse {
+  entities: LinkedEntity[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export async function getEntitiesByTerm(
+  termId: string,
+  options?: {
+    page?: number;
+    pageSize?: number;
+    mappingType?: string;
+    minConfidence?: number;
+  }
+): Promise<LinkedEntitiesResponse> {
+  const params = new URLSearchParams();
+  if (options?.page) params.set('page', options.page.toString());
+  if (options?.pageSize) params.set('page_size', options.pageSize.toString());
+  if (options?.mappingType) params.set('mapping_type', options.mappingType);
+  if (options?.minConfidence !== undefined) {
+    params.set('min_confidence', options.minConfidence.toString());
+  }
+
+  const response = await fetch(`/api/entities/by-ccv-term/${termId}?${params}`);
+  if (!response.ok) throw new Error('Failed to fetch linked entities');
+  return response.json();
+}
