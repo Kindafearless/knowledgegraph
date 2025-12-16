@@ -101,14 +101,17 @@ export function TermBrowser({ onSelectTerm, onCreateTerm, selectedTermId }: Term
                   selectedTermId === term.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                 }`}
               >
-                <button
-                  onClick={() => onSelectTerm(term)}
-                  className="w-full p-3 text-left flex items-start gap-3"
-                >
-                  <div className="flex-shrink-0 mt-0.5">
+                <div className="w-full p-3 text-left flex items-start gap-3">
+                  <div
+                    onClick={() => onSelectTerm(term)}
+                    className="flex-shrink-0 mt-0.5 cursor-pointer"
+                  >
                     <Tag className="w-4 h-4 text-gray-400" />
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div
+                    onClick={() => onSelectTerm(term)}
+                    className="flex-1 min-w-0 cursor-pointer"
+                  >
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-900 dark:text-white truncate">
                         {term.canonical_name}
@@ -143,7 +146,6 @@ export function TermBrowser({ onSelectTerm, onCreateTerm, selectedTermId }: Term
                   <DropdownMenu.Root>
                     <DropdownMenu.Trigger asChild>
                       <button
-                        onClick={(e) => e.stopPropagation()}
                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
                       >
                         <MoreVertical className="w-4 h-4 text-gray-500" />
@@ -169,7 +171,7 @@ export function TermBrowser({ onSelectTerm, onCreateTerm, selectedTermId }: Term
                       </DropdownMenu.Content>
                     </DropdownMenu.Portal>
                   </DropdownMenu.Root>
-                </button>
+                </div>
               </li>
             ))}
           </ul>
