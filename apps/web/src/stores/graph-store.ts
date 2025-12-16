@@ -48,7 +48,7 @@ interface GraphState {
   error: string | null;
 
   // Layout settings
-  layout: 'force' | 'hierarchical' | 'radial' | 'dagre';
+  layout: 'force' | 'hierarchical' | 'radial' | 'dagre' | 'hub' | 'cluster';
   showLabels: boolean;
   showMinimap: boolean;
 
@@ -195,9 +195,140 @@ function applyForceLayout(nodes: GraphNode[]): GraphNode[] {
   });
 }
 
+function applyHubAndSpokeLayout(nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
+  if (nodes.length === 0) return nodes;
+
+  // Calculate degree (connection count) for each node
+  const degreeMap: Record<string, number> = {};
+  nodes.forEach((n) => (degreeMap[n.id] = 0));
+  edges.forEach((e) => {
+    if (degreeMap[e.source] !== undefined) degreeMap[e.source]++;
+    if (degreeMap[e.target] !== undefined) degreeMap[e.target]++;
+  });
+
+  // Sort nodes by degree (most connected first)
+  const sortedNodes = [...nodes].sort(
+    (a, b) => (degreeMap[b.id] || 0) - (degreeMap[a.id] || 0)
+  );
+
+  // Find hubs (top connected nodes - take top 20% or at least 1)
+  const hubCount = Math.max(1, Math.ceil(nodes.length * 0.2));
+  const hubs = new Set(sortedNodes.slice(0, hubCount).map((n) => n.id));
+
+  const centerX = 400;
+  const centerY = 300;
+  const hubRadius = Math.min(150, hubCount * 40);
+  const spokeRadius = hubRadius + 150 + nodes.length * 5;
+
+  // Position hubs in inner circle
+  const hubNodes = sortedNodes.filter((n) => hubs.has(n.id));
+  const spokeNodes = sortedNodes.filter((n) => !hubs.has(n.id));
+
+  const result: GraphNode[] = [];
+
+  // Place hubs
+  hubNodes.forEach((node, i) => {
+    const angle = (i / hubNodes.length) * 2 * Math.PI - Math.PI / 2;
+    result.push({
+      ...node,
+      position: {
+        x: centerX + (hubNodes.length === 1 ? 0 : hubRadius * Math.cos(angle)),
+        y: centerY + (hubNodes.length === 1 ? 0 : hubRadius * Math.sin(angle)),
+      },
+    });
+  });
+
+  // Place spokes in outer circle
+  spokeNodes.forEach((node, i) => {
+    const angle = (i / spokeNodes.length) * 2 * Math.PI - Math.PI / 2;
+    result.push({
+      ...node,
+      position: {
+        x: centerX + spokeRadius * Math.cos(angle),
+        y: centerY + spokeRadius * Math.sin(angle),
+      },
+    });
+  });
+
+  return result;
+}
+
+function applyClusterLayout(nodes: GraphNode[], edges: GraphEdge[]): GraphNode[] {
+  if (nodes.length === 0) return nodes;
+
+  // Build adjacency list
+  const adjacency: Record<string, Set<string>> = {};
+  nodes.forEach((n) => (adjacency[n.id] = new Set()));
+  edges.forEach((e) => {
+    if (adjacency[e.source]) adjacency[e.source].add(e.target);
+    if (adjacency[e.target]) adjacency[e.target].add(e.source);
+  });
+
+  // Simple clustering: group nodes by their connections using union-find-like approach
+  const visited = new Set<string>();
+  const clusters: GraphNode[][] = [];
+
+  nodes.forEach((node) => {
+    if (visited.has(node.id)) return;
+
+    // BFS to find connected component
+    const cluster: GraphNode[] = [];
+    const queue = [node.id];
+    visited.add(node.id);
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      const currentNode = nodes.find((n) => n.id === currentId);
+      if (currentNode) cluster.push(currentNode);
+
+      adjacency[currentId]?.forEach((neighborId) => {
+        if (!visited.has(neighborId)) {
+          visited.add(neighborId);
+          queue.push(neighborId);
+        }
+      });
+    }
+
+    if (cluster.length > 0) clusters.push(cluster);
+  });
+
+  // Also add disconnected nodes as individual clusters
+  nodes.forEach((node) => {
+    if (!visited.has(node.id)) {
+      clusters.push([node]);
+    }
+  });
+
+  // Position clusters
+  const result: GraphNode[] = [];
+  const clusterSpacing = 300;
+  const cols = Math.ceil(Math.sqrt(clusters.length));
+
+  clusters.forEach((cluster, clusterIndex) => {
+    const clusterX = (clusterIndex % cols) * clusterSpacing + 200;
+    const clusterY = Math.floor(clusterIndex / cols) * clusterSpacing + 200;
+
+    // Position nodes within cluster in a small circle
+    const clusterRadius = Math.max(50, cluster.length * 15);
+    cluster.forEach((node, i) => {
+      const angle = (i / cluster.length) * 2 * Math.PI - Math.PI / 2;
+      result.push({
+        ...node,
+        position: {
+          x: clusterX + (cluster.length === 1 ? 0 : clusterRadius * Math.cos(angle)),
+          y: clusterY + (cluster.length === 1 ? 0 : clusterRadius * Math.sin(angle)),
+        },
+      });
+    });
+  });
+
+  return result;
+}
+
 function applyLayout(
   nodes: GraphNode[],
-  layout: 'force' | 'hierarchical' | 'radial' | 'dagre'
+  layout: 'force' | 'hierarchical' | 'radial' | 'dagre' | 'hub' | 'cluster',
+  edges: GraphEdge[] = []
 ): GraphNode[] {
   switch (layout) {
     case 'radial':
@@ -206,6 +337,10 @@ function applyLayout(
       return applyHierarchicalLayout(nodes);
     case 'force':
       return applyForceLayout(nodes);
+    case 'hub':
+      return applyHubAndSpokeLayout(nodes, edges);
+    case 'cluster':
+      return applyClusterLayout(nodes, edges);
     case 'dagre':
     default:
       return applyGridLayout(nodes);
@@ -262,7 +397,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   setLayout: (layout) =>
     set((state) => ({
       layout,
-      nodes: applyLayout(state.nodes, layout),
+      nodes: applyLayout(state.nodes, layout, state.edges),
     })),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
   toggleMinimap: () => set((state) => ({ showMinimap: !state.showMinimap })),
@@ -342,8 +477,8 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       const graphNodes = (data.nodes || []).map((n: ApiEntity, i: number) => entityToNode(n, i));
       const graphEdges = (data.edges || []).map(relationshipToEdge);
 
-      // Apply current layout to nodes
-      setNodes(applyLayout(graphNodes, layout));
+      // Apply current layout to nodes (passing edges for relationship-based layouts)
+      setNodes(applyLayout(graphNodes, layout, graphEdges));
       setEdges(graphEdges);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');

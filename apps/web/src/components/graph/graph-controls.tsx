@@ -13,6 +13,8 @@ import {
   Search,
   Download,
   Loader2,
+  Target,
+  Waypoints,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +22,9 @@ const layouts = [
   { id: 'force', label: 'Force', icon: Network },
   { id: 'hierarchical', label: 'Hierarchical', icon: GitBranch },
   { id: 'radial', label: 'Radial', icon: Circle },
-  { id: 'dagre', label: 'DAG', icon: LayoutGrid },
+  { id: 'dagre', label: 'Grid', icon: LayoutGrid },
+  { id: 'hub', label: 'Hub & Spoke', icon: Target },
+  { id: 'cluster', label: 'Clusters', icon: Waypoints },
 ] as const;
 
 export function GraphControls() {
