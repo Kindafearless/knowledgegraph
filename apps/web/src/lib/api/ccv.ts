@@ -1,8 +1,6 @@
 /**
- * CCV API client for interacting with the CCV service.
+ * CCV API client for interacting with the CCV service through Next.js proxy routes.
  */
-
-const CCV_SERVICE_URL = process.env.NEXT_PUBLIC_CCV_SERVICE_URL || 'http://localhost:8003';
 
 export interface CCVTerm {
   id: string;
@@ -75,13 +73,13 @@ export async function listTerms(params?: {
   if (params?.page) searchParams.set('page', params.page.toString());
   if (params?.page_size) searchParams.set('page_size', params.page_size.toString());
 
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/terms?${searchParams}`);
+  const response = await fetch(`/api/ccv/terms?${searchParams}`);
   if (!response.ok) throw new Error('Failed to fetch terms');
   return response.json();
 }
 
 export async function getTerm(termId: string): Promise<TermWithDetails> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/terms/${termId}`);
+  const response = await fetch(`/api/ccv/terms/${termId}`);
   if (!response.ok) throw new Error('Failed to fetch term');
   return response.json();
 }
@@ -92,7 +90,7 @@ export async function createTerm(data: {
   domain?: string;
   parent_id?: string;
 }): Promise<CCVTerm> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/terms`, {
+  const response = await fetch('/api/ccv/terms', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -111,7 +109,7 @@ export async function updateTerm(
     status: string;
   }>
 ): Promise<CCVTerm> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/terms/${termId}`, {
+  const response = await fetch(`/api/ccv/terms/${termId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -121,7 +119,7 @@ export async function updateTerm(
 }
 
 export async function deleteTerm(termId: string): Promise<void> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/terms/${termId}`, {
+  const response = await fetch(`/api/ccv/terms/${termId}`, {
     method: 'DELETE',
   });
   if (!response.ok) throw new Error('Failed to delete term');
@@ -131,7 +129,7 @@ export async function searchTerms(query: string, domain?: string): Promise<CCVTe
   const searchParams = new URLSearchParams({ q: query });
   if (domain) searchParams.set('domain', domain);
 
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/terms/search?${searchParams}`);
+  const response = await fetch(`/api/ccv/terms/search?${searchParams}`);
   if (!response.ok) throw new Error('Failed to search terms');
   return response.json();
 }
@@ -141,7 +139,7 @@ export async function addSynonym(
   termId: string,
   synonym: string
 ): Promise<CCVSynonym> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/terms/${termId}/synonyms`, {
+  const response = await fetch(`/api/ccv/terms/${termId}/synonyms`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ synonym }),
@@ -152,7 +150,7 @@ export async function addSynonym(
 
 export async function removeSynonym(termId: string, synonymId: string): Promise<void> {
   const response = await fetch(
-    `${CCV_SERVICE_URL}/api/v1/terms/${termId}/synonyms/${synonymId}`,
+    `/api/ccv/terms/${termId}/synonyms/${synonymId}`,
     { method: 'DELETE' }
   );
   if (!response.ok) throw new Error('Failed to remove synonym');
@@ -171,13 +169,13 @@ export async function listSuggestions(params?: {
   if (params?.page) searchParams.set('page', params.page.toString());
   if (params?.page_size) searchParams.set('page_size', params.page_size.toString());
 
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/suggestions?${searchParams}`);
+  const response = await fetch(`/api/ccv/suggestions?${searchParams}`);
   if (!response.ok) throw new Error('Failed to fetch suggestions');
   return response.json();
 }
 
 export async function getPendingSuggestions(): Promise<CCVSuggestion[]> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/suggestions/pending`);
+  const response = await fetch('/api/ccv/suggestions/pending');
   if (!response.ok) throw new Error('Failed to fetch pending suggestions');
   return response.json();
 }
@@ -188,7 +186,7 @@ export async function reviewSuggestion(
   notes?: string,
   modified_value?: string
 ): Promise<CCVSuggestion> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/suggestions/${suggestionId}/review`, {
+  const response = await fetch(`/api/ccv/suggestions/${suggestionId}/review`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, notes, modified_value }),
@@ -201,7 +199,7 @@ export async function batchReviewSuggestions(
   suggestionIds: string[],
   action: 'approve' | 'reject'
 ): Promise<{ reviewed: number; total: number }> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/suggestions/batch-review`, {
+  const response = await fetch('/api/ccv/suggestions/batch-review', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ suggestion_ids: suggestionIds, action }),
@@ -219,7 +217,7 @@ export async function getHierarchy(params?: {
   if (params?.domain) searchParams.set('domain', params.domain);
   if (params?.max_depth) searchParams.set('max_depth', params.max_depth.toString());
 
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/hierarchy?${searchParams}`);
+  const response = await fetch(`/api/ccv/hierarchy?${searchParams}`);
   if (!response.ok) throw new Error('Failed to fetch hierarchy');
   return response.json();
 }
@@ -230,14 +228,14 @@ export async function getHierarchyStats(): Promise<{
   max_depth: number;
   domains: string[];
 }> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/hierarchy/stats`);
+  const response = await fetch('/api/ccv/hierarchy/stats');
   if (!response.ok) throw new Error('Failed to fetch hierarchy stats');
   return response.json();
 }
 
 export async function moveTerm(termId: string, newParentId: string | null): Promise<CCVTerm> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/hierarchy/${termId}/move`, {
-    method: 'POST',
+  const response = await fetch(`/api/ccv/hierarchy/${termId}`, {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ new_parent_id: newParentId }),
   });
@@ -246,13 +244,13 @@ export async function moveTerm(termId: string, newParentId: string | null): Prom
 }
 
 export async function getAncestors(termId: string): Promise<CCVTerm[]> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/hierarchy/${termId}/ancestors`);
+  const response = await fetch(`/api/ccv/hierarchy/${termId}/ancestors`);
   if (!response.ok) throw new Error('Failed to fetch ancestors');
   return response.json();
 }
 
 export async function getDescendants(termId: string): Promise<CCVTerm[]> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/hierarchy/${termId}/descendants`);
+  const response = await fetch(`/api/ccv/hierarchy/${termId}/descendants`);
   if (!response.ok) throw new Error('Failed to fetch descendants');
   return response.json();
 }
@@ -263,7 +261,7 @@ export async function extractTermsFromText(data: {
   context?: string;
   domain?: string;
 }): Promise<{ suggestion_count: number; suggestions: CCVSuggestion[] }> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/extraction/text`, {
+  const response = await fetch('/api/ccv/extraction/text', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -283,7 +281,7 @@ export async function analyzeVocabularyCoverage(data: {
   matched_examples: string[];
   unmatched_examples: string[];
 }> {
-  const response = await fetch(`${CCV_SERVICE_URL}/api/v1/extraction/analyze`, {
+  const response = await fetch('/api/ccv/extraction/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
