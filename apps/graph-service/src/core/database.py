@@ -3,6 +3,7 @@
 from typing import AsyncGenerator
 
 import structlog
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.core.config import settings
@@ -28,7 +29,7 @@ async def init_db() -> None:
     logger.info("Initializing database connection")
     async with engine.begin() as conn:
         # Verify connection
-        await conn.execute("SELECT 1")
+        await conn.execute(text("SELECT 1"))
     logger.info("Database connection established")
 
 

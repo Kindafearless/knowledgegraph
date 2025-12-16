@@ -112,17 +112,15 @@ async def init_db() -> None:
             )
         """))
 
-        # Create indexes
-        await conn.execute(text("""
-            CREATE INDEX IF NOT EXISTS idx_ccv_terms_canonical ON ccv_terms(canonical_name);
-            CREATE INDEX IF NOT EXISTS idx_ccv_terms_domain ON ccv_terms(domain);
-            CREATE INDEX IF NOT EXISTS idx_ccv_terms_parent ON ccv_terms(parent_id);
-            CREATE INDEX IF NOT EXISTS idx_ccv_terms_status ON ccv_terms(status);
-            CREATE INDEX IF NOT EXISTS idx_ccv_synonyms_term ON ccv_synonyms(term_id);
-            CREATE INDEX IF NOT EXISTS idx_ccv_synonyms_synonym ON ccv_synonyms(synonym);
-            CREATE INDEX IF NOT EXISTS idx_ccv_suggestions_status ON ccv_suggestions(status);
-            CREATE INDEX IF NOT EXISTS idx_ccv_mappings_source ON ccv_data_source_mappings(data_source_id);
-        """))
+        # Create indexes (each must be separate for asyncpg)
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_ccv_terms_canonical ON ccv_terms(canonical_name)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_ccv_terms_domain ON ccv_terms(domain)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_ccv_terms_parent ON ccv_terms(parent_id)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_ccv_terms_status ON ccv_terms(status)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_ccv_synonyms_term ON ccv_synonyms(term_id)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_ccv_synonyms_synonym ON ccv_synonyms(synonym)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_ccv_suggestions_status ON ccv_suggestions(status)"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_ccv_mappings_source ON ccv_data_source_mappings(data_source_id)"))
 
         # Full-text search index
         await conn.execute(text("""
