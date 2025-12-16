@@ -56,7 +56,7 @@ async def traverse_graph(
     service: Annotated[GraphQueryService, Depends(get_query_service)],
 ) -> GraphSubset:
     """Traverse the graph from a starting node."""
-    check_permission(request, "graph:query:execute")
+    check_permission(request, "entity:read")
 
     return await service.traverse(
         start_node_id=traversal.start_node_id,
@@ -75,7 +75,7 @@ async def find_paths(
     service: Annotated[GraphQueryService, Depends(get_query_service)],
 ) -> GraphSubset:
     """Find paths between two nodes."""
-    check_permission(request, "graph:query:execute")
+    check_permission(request, "entity:read")
 
     return await service.find_paths(
         source_id=path_request.source_id,
@@ -94,7 +94,7 @@ async def search_graph(
     service: Annotated[GraphQueryService, Depends(get_query_service)],
 ) -> GraphSubset:
     """Search the graph using text query."""
-    check_permission(request, "graph:query:execute")
+    check_permission(request, "entity:read")
 
     return await service.search(
         query=search.query,
@@ -114,7 +114,7 @@ async def expand_node(
     depth: int = Query(1, ge=1, le=3),
 ) -> GraphSubset:
     """Expand a node to show its immediate neighbors."""
-    check_permission(request, "graph:query:execute")
+    check_permission(request, "entity:read")
 
     return await service.traverse(
         start_node_id=node_id,
@@ -133,7 +133,7 @@ async def get_centrality(
     limit: int = Query(20, ge=1, le=100),
 ) -> list[dict]:
     """Get top nodes by centrality measure."""
-    check_permission(request, "graph:analytics:read")
+    check_permission(request, "entity:read")
 
     return await service.get_centrality(
         algorithm=algorithm,
@@ -149,7 +149,7 @@ async def detect_communities(
     service: Annotated[GraphQueryService, Depends(get_query_service)],
 ) -> list[dict]:
     """Detect communities in the graph."""
-    check_permission(request, "graph:analytics:read")
+    check_permission(request, "entity:read")
 
     return await service.detect_communities(
         user_data_sources=request.state.data_sources,

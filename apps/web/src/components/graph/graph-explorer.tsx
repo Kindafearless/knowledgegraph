@@ -24,6 +24,11 @@ const nodeTypes = {
   organization: EntityNode,
 };
 
+const defaultEdgeOptions = {
+  animated: false,
+  style: { strokeWidth: 2 },
+};
+
 export function GraphExplorer() {
   const {
     nodes,
@@ -105,10 +110,7 @@ export function GraphExplorer() {
         fitView
         minZoom={0.1}
         maxZoom={2}
-        defaultEdgeOptions={{
-          animated: false,
-          style: { strokeWidth: 2 },
-        }}
+        defaultEdgeOptions={defaultEdgeOptions}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
         <Controls showInteractive={false} />
