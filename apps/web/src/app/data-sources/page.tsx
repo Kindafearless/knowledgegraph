@@ -6,8 +6,6 @@ import { Header } from '@/components/layout/header';
 import { useAuthStore } from '@/stores/auth-store';
 import { Database, Plus, RefreshCw, Settings, Loader2, AlertCircle, Trash2 } from 'lucide-react';
 
-const GRAPH_SERVICE_URL = process.env.NEXT_PUBLIC_GRAPH_SERVICE_URL || 'http://localhost:8001';
-
 interface DataSource {
   id: string;
   name: string;
@@ -33,7 +31,7 @@ export default function DataSourcesPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${GRAPH_SERVICE_URL}/api/v1/datasources`, {
+      const response = await fetch('/api/datasources', {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
@@ -60,7 +58,7 @@ export default function DataSourcesPage() {
     setSyncingIds(prev => new Set([...prev, sourceId]));
 
     try {
-      const response = await fetch(`${GRAPH_SERVICE_URL}/api/v1/datasources/${sourceId}/sync`, {
+      const response = await fetch(`/api/datasources/${sourceId}/sync`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,

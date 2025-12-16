@@ -6,8 +6,6 @@ import { Header } from '@/components/layout/header';
 import { useAuthStore } from '@/stores/auth-store';
 import { Users, Plus, MoreVertical, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
-const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'http://localhost:8080';
-
 interface User {
   id: string;
   name: string;
@@ -31,7 +29,7 @@ export default function UsersPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${AUTH_SERVICE_URL}/api/v1/admin/users`, {
+      const response = await fetch('/api/admin/users', {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',

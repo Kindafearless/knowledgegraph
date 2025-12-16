@@ -6,8 +6,6 @@ import { Header } from '@/components/layout/header';
 import { useAuthStore } from '@/stores/auth-store';
 import { Shield, Plus, Check, X, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
-const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'http://localhost:8080';
-
 interface Role {
   id: string;
   name: string;
@@ -41,7 +39,7 @@ export default function PermissionsPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${AUTH_SERVICE_URL}/api/v1/admin/roles`, {
+      const response = await fetch('/api/admin/roles', {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',

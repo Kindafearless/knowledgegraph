@@ -6,9 +6,6 @@ import { Header } from '@/components/layout/header';
 import { useAuthStore } from '@/stores/auth-store';
 import { Settings, Database, Brain, Bell, Shield, Save, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
-const GRAPH_SERVICE_URL = process.env.NEXT_PUBLIC_GRAPH_SERVICE_URL || 'http://localhost:8001';
-const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'http://localhost:8080';
-
 interface DatabaseStats {
   entities: number;
   relationships: number;
@@ -56,7 +53,7 @@ export default function SettingsPage() {
 
     setLoadingStats(true);
     try {
-      const response = await fetch(`${GRAPH_SERVICE_URL}/api/v1/stats`, {
+      const response = await fetch('/api/stats', {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
         },
