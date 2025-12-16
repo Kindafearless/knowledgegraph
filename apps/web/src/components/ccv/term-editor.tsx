@@ -44,10 +44,10 @@ export function TermEditor({ termId, isOpen, onClose, onSaved }: TermEditorProps
   // Reset form when term changes
   useEffect(() => {
     if (term) {
-      setCanonicalName(term.canonical_name);
+      setCanonicalName(term.canonical_name || '');
       setDefinition(term.definition || '');
       setDomain(term.domain || '');
-      setParentId(term.parent_id);
+      setParentId(term.parent_id || null);
     } else if (!termId) {
       setCanonicalName('');
       setDefinition('');
@@ -97,7 +97,7 @@ export function TermEditor({ termId, isOpen, onClose, onSaved }: TermEditorProps
 
   const handleSelectParent = (parent: CCVTerm) => {
     setParentId(parent.id);
-    setParentSearch(parent.canonical_name);
+    setParentSearch(parent.canonical_name || '');
     setShowParentSearch(false);
   };
 
