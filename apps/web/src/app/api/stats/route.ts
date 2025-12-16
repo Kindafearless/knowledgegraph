@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
 
-    const response = await fetch(`${GRAPH_SERVICE_URL}/api/v1/stats`, {
+    const response = await fetch(`${GRAPH_SERVICE_URL}/api/v1/datasources/stats`, {
       headers: {
         'Content-Type': 'application/json',
         ...(authHeader ? { Authorization: authHeader } : {}),

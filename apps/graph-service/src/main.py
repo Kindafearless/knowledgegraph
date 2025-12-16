@@ -7,7 +7,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import entities, relationships, queries, health
+from src.api.routes import entities, relationships, queries, health, datasources
 from src.core.config import settings
 from src.core.database import init_db, close_db
 from src.core.middleware import AuthMiddleware, LoggingMiddleware
@@ -52,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(entities.router, prefix="/api/v1/entities", tags=["Entities"])
     app.include_router(relationships.router, prefix="/api/v1/relationships", tags=["Relationships"])
     app.include_router(queries.router, prefix="/api/v1/queries", tags=["Queries"])
+    app.include_router(datasources.router, prefix="/api/v1/datasources", tags=["Data Sources"])
 
     return app
 
