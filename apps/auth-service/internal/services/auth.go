@@ -113,12 +113,14 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*Lo
 		RefreshToken: authResult.RefreshToken,
 		ExpiresIn:    authResult.ExpiresIn,
 		User: UserResponse{
-			ID:          user.ID.String(),
-			Email:       user.Email,
-			Name:        user.Name,
-			Roles:       user.Roles,
-			Permissions: permissions,
-			Attributes:  user.Attributes,
+			ID:             user.ID.String(),
+			Email:          user.Email,
+			Name:           user.Name,
+			Roles:          user.Roles,
+			Permissions:    permissions,
+			Attributes:     user.Attributes,
+			DataSources:    user.DataSources,
+			Classification: user.Classification,
 		},
 	}, nil
 }
@@ -170,12 +172,14 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*L
 		AccessToken: token,
 		ExpiresIn:   authResult.ExpiresIn,
 		User: UserResponse{
-			ID:          user.ID.String(),
-			Email:       user.Email,
-			Name:        user.Name,
-			Roles:       user.Roles,
-			Permissions: permissions,
-			Attributes:  user.Attributes,
+			ID:             user.ID.String(),
+			Email:          user.Email,
+			Name:           user.Name,
+			Roles:          user.Roles,
+			Permissions:    permissions,
+			Attributes:     user.Attributes,
+			DataSources:    user.DataSources,
+			Classification: user.Classification,
 		},
 	}, nil
 }
@@ -280,6 +284,32 @@ func (s *AuthService) GetUser(ctx context.Context, userID uuid.UUID) (*models.Us
 	return s.userRepo.FindByID(ctx, userID)
 }
 
+// GetUserWithPermissions retrieves a user by ID with their effective permissions
+func (s *AuthService) GetUserWithPermissions(ctx context.Context, userID uuid.UUID) (*UserResponse, error) {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get effective permissions based on user's roles
+	permissions, err := s.permissionRepo.GetEffectivePermissions(ctx, user.Roles)
+	if err != nil {
+		s.logger.Warn("Failed to get permissions", zap.Error(err))
+		permissions = []string{}
+	}
+
+	return &UserResponse{
+		ID:             user.ID.String(),
+		Email:          user.Email,
+		Name:           user.Name,
+		Roles:          user.Roles,
+		Permissions:    permissions,
+		Attributes:     user.Attributes,
+		DataSources:    user.DataSources,
+		Classification: user.Classification,
+	}, nil
+}
+
 // LoginResponse represents the login response
 type LoginResponse struct {
 	AccessToken  string       `json:"access_token"`
@@ -290,10 +320,12 @@ type LoginResponse struct {
 
 // UserResponse represents user data in responses
 type UserResponse struct {
-	ID          string            `json:"id"`
-	Email       string            `json:"email"`
-	Name        string            `json:"name"`
-	Roles       []string          `json:"roles"`
-	Permissions []string          `json:"permissions"`
-	Attributes  map[string]string `json:"attributes"`
+	ID             string            `json:"id"`
+	Email          string            `json:"email"`
+	Name           string            `json:"name"`
+	Roles          []string          `json:"roles"`
+	Permissions    []string          `json:"permissions"`
+	Attributes     map[string]string `json:"attributes"`
+	DataSources    []string          `json:"data_sources"`
+	Classification string            `json:"classification"`
 }

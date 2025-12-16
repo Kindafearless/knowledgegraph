@@ -102,7 +102,7 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "OAuth callback received"})
 }
 
-// GetCurrentUser returns the current authenticated user
+// GetCurrentUser returns the current authenticated user with permissions
 func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	claims, exists := c.Get("claims")
 	if !exists {
@@ -111,13 +111,13 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	}
 
 	tokenClaims := claims.(*models.TokenClaims)
-	user, err := h.authService.GetUser(c.Request.Context(), tokenClaims.UserID)
+	userResponse, err := h.authService.GetUserWithPermissions(c.Request.Context(), tokenClaims.UserID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, userResponse)
 }
 
 // UpdateCurrentUser updates the current user's profile
