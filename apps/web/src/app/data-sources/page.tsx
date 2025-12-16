@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
+import { ChatPanel } from '@/components/chat/chat-panel';
 import { useAuthStore } from '@/stores/auth-store';
+import { useUIStore } from '@/stores/ui-store';
 import { Database, Plus, RefreshCw, Settings, Loader2, AlertCircle, Trash2, X, FileText, Globe, Server } from 'lucide-react';
 
 interface DataSource {
@@ -25,6 +27,7 @@ const DATA_SOURCE_TYPES = [
 
 export default function DataSourcesPage() {
   const { isAuthenticated, isLoading: authLoading, accessToken } = useAuthStore();
+  const { isChatOpen } = useUIStore();
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -182,8 +185,9 @@ export default function DataSourcesPage() {
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden">
-        <Header onToggleChat={() => {}} isChatOpen={false} />
-        <main className="flex-1 overflow-auto p-6">
+        <Header />
+        <div className="flex flex-1 overflow-hidden">
+          <main className="flex-1 overflow-auto p-6">
           <div className="max-w-6xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
               <div>
@@ -277,6 +281,12 @@ export default function DataSourcesPage() {
             )}
           </div>
         </main>
+          {isChatOpen && (
+            <aside className="w-96 border-l border-border flex flex-col bg-card">
+              <ChatPanel />
+            </aside>
+          )}
+        </div>
       </div>
 
       {/* Add Data Source Modal */}

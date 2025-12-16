@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
 import { GraphExplorer } from '@/components/graph/graph-explorer';
 import { ChatPanel } from '@/components/chat/chat-panel';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { useAuthStore } from '@/stores/auth-store';
+import { useUIStore } from '@/stores/ui-store';
 
 export default function HomePage() {
-  const [isChatOpen, setIsChatOpen] = useState(true);
   const { isAuthenticated, isLoading } = useAuthStore();
+  const { isChatOpen } = useUIStore();
 
   if (isLoading) {
     return (
@@ -46,7 +46,7 @@ export default function HomePage() {
       {/* Main content area */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Header */}
-        <Header onToggleChat={() => setIsChatOpen(!isChatOpen)} isChatOpen={isChatOpen} />
+        <Header />
 
         {/* Content */}
         <div className="flex flex-1 overflow-hidden">

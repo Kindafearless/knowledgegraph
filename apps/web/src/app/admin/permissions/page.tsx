@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
+import { ChatPanel } from '@/components/chat/chat-panel';
 import { useAuthStore } from '@/stores/auth-store';
+import { useUIStore } from '@/stores/ui-store';
 import { Shield, Plus, Check, X, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface Role {
@@ -28,6 +30,7 @@ const allPermissions = [
 
 export default function PermissionsPage() {
   const { isAuthenticated, isLoading: authLoading, accessToken } = useAuthStore();
+  const { isChatOpen } = useUIStore();
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,8 +86,9 @@ export default function PermissionsPage() {
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden">
-        <Header onToggleChat={() => {}} isChatOpen={false} />
-        <main className="flex-1 overflow-auto p-6">
+        <Header />
+        <div className="flex flex-1 overflow-hidden">
+          <main className="flex-1 overflow-auto p-6">
           <div className="max-w-6xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
               <div>
@@ -164,7 +168,13 @@ export default function PermissionsPage() {
               </div>
             )}
           </div>
-        </main>
+          </main>
+          {isChatOpen && (
+            <aside className="w-96 border-l border-border flex flex-col bg-card">
+              <ChatPanel />
+            </aside>
+          )}
+        </div>
       </div>
     </div>
   );

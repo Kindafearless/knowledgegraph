@@ -13,19 +13,16 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useGraphStore } from '@/stores/graph-store';
+import { useUIStore } from '@/stores/ui-store';
 import { cn } from '@/lib/utils';
 
-interface HeaderProps {
-  onToggleChat: () => void;
-  isChatOpen: boolean;
-}
-
-export function Header({ onToggleChat, isChatOpen }: HeaderProps) {
+export function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDark, setIsDark] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, logout } = useAuthStore();
   const { searchAndVisualize, isLoading } = useGraphStore();
+  const { isChatOpen, toggleChat } = useUIStore();
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +66,7 @@ export function Header({ onToggleChat, isChatOpen }: HeaderProps) {
       <div className="flex items-center gap-2 ml-4">
         {/* Chat toggle */}
         <button
-          onClick={onToggleChat}
+          onClick={toggleChat}
           className={cn(
             'p-2 rounded-md transition-colors',
             isChatOpen

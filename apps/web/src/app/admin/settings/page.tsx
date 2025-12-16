@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
+import { ChatPanel } from '@/components/chat/chat-panel';
 import { useAuthStore } from '@/stores/auth-store';
+import { useUIStore } from '@/stores/ui-store';
 import { Settings, Database, Brain, Bell, Shield, Save, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface DatabaseStats {
@@ -15,6 +17,7 @@ interface DatabaseStats {
 
 export default function SettingsPage() {
   const { isAuthenticated, isLoading: authLoading, accessToken } = useAuthStore();
+  const { isChatOpen } = useUIStore();
   const [activeTab, setActiveTab] = useState('general');
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -116,8 +119,9 @@ export default function SettingsPage() {
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden">
-        <Header onToggleChat={() => {}} isChatOpen={false} />
-        <main className="flex-1 overflow-auto p-6">
+        <Header />
+        <div className="flex flex-1 overflow-hidden">
+          <main className="flex-1 overflow-auto p-6">
           <div className="max-w-4xl mx-auto space-y-6">
             <div>
               <h1 className="text-2xl font-bold">Settings</h1>
@@ -440,7 +444,13 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-        </main>
+          </main>
+          {isChatOpen && (
+            <aside className="w-96 border-l border-border flex flex-col bg-card">
+              <ChatPanel />
+            </aside>
+          )}
+        </div>
       </div>
     </div>
   );
