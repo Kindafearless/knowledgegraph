@@ -115,6 +115,103 @@ function relationshipToEdge(rel: ApiRelationship): GraphEdge {
   };
 }
 
+// Layout algorithms
+function applyGridLayout(nodes: GraphNode[]): GraphNode[] {
+  const cols = Math.ceil(Math.sqrt(nodes.length));
+  const spacing = 200;
+  return nodes.map((node, i) => ({
+    ...node,
+    position: {
+      x: (i % cols) * spacing,
+      y: Math.floor(i / cols) * spacing,
+    },
+  }));
+}
+
+function applyRadialLayout(nodes: GraphNode[]): GraphNode[] {
+  if (nodes.length === 0) return nodes;
+  const centerX = 400;
+  const centerY = 300;
+  const radius = Math.max(150, nodes.length * 20);
+  const angleStep = (2 * Math.PI) / nodes.length;
+
+  return nodes.map((node, i) => ({
+    ...node,
+    position: {
+      x: centerX + radius * Math.cos(i * angleStep - Math.PI / 2),
+      y: centerY + radius * Math.sin(i * angleStep - Math.PI / 2),
+    },
+  }));
+}
+
+function applyHierarchicalLayout(nodes: GraphNode[]): GraphNode[] {
+  // Group nodes by type
+  const typeGroups: Record<string, GraphNode[]> = {};
+  nodes.forEach((node) => {
+    const type = node.data.type || 'Unknown';
+    if (!typeGroups[type]) typeGroups[type] = [];
+    typeGroups[type].push(node);
+  });
+
+  const types = Object.keys(typeGroups);
+  const rowHeight = 150;
+  const colSpacing = 180;
+  const result: GraphNode[] = [];
+
+  types.forEach((type, rowIndex) => {
+    const group = typeGroups[type];
+    const startX = -(group.length * colSpacing) / 2 + 400;
+    group.forEach((node, colIndex) => {
+      result.push({
+        ...node,
+        position: {
+          x: startX + colIndex * colSpacing,
+          y: rowIndex * rowHeight + 50,
+        },
+      });
+    });
+  });
+
+  return result;
+}
+
+function applyForceLayout(nodes: GraphNode[]): GraphNode[] {
+  // Simple force-directed approximation without d3-force
+  // Spread nodes out with some randomness
+  const centerX = 400;
+  const centerY = 300;
+  const spread = Math.max(200, nodes.length * 30);
+
+  return nodes.map((node, i) => {
+    const angle = (i / nodes.length) * 2 * Math.PI + Math.random() * 0.5;
+    const distance = (spread / 2) * (0.5 + Math.random() * 0.5);
+    return {
+      ...node,
+      position: {
+        x: centerX + distance * Math.cos(angle),
+        y: centerY + distance * Math.sin(angle),
+      },
+    };
+  });
+}
+
+function applyLayout(
+  nodes: GraphNode[],
+  layout: 'force' | 'hierarchical' | 'radial' | 'dagre'
+): GraphNode[] {
+  switch (layout) {
+    case 'radial':
+      return applyRadialLayout(nodes);
+    case 'hierarchical':
+      return applyHierarchicalLayout(nodes);
+    case 'force':
+      return applyForceLayout(nodes);
+    case 'dagre':
+    default:
+      return applyGridLayout(nodes);
+  }
+}
+
 export const useGraphStore = create<GraphState>((set, get) => ({
   nodes: [],
   edges: [],
@@ -162,7 +259,11 @@ export const useGraphStore = create<GraphState>((set, get) => ({
 
   setSelectedNode: (selectedNodeId) => set({ selectedNodeId, selectedEdgeId: null }),
   setSelectedEdge: (selectedEdgeId) => set({ selectedEdgeId, selectedNodeId: null }),
-  setLayout: (layout) => set({ layout }),
+  setLayout: (layout) =>
+    set((state) => ({
+      layout,
+      nodes: applyLayout(state.nodes, layout),
+    })),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
   toggleMinimap: () => set((state) => ({ showMinimap: !state.showMinimap })),
   setLoading: (isLoading) => set({ isLoading }),
@@ -235,12 +336,14 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       if (!response.ok) throw new Error('Search failed');
 
       const data = await response.json();
+      const { layout } = get();
 
       // Convert API response to ReactFlow format
       const graphNodes = (data.nodes || []).map((n: ApiEntity, i: number) => entityToNode(n, i));
       const graphEdges = (data.edges || []).map(relationshipToEdge);
 
-      setNodes(graphNodes);
+      // Apply current layout to nodes
+      setNodes(applyLayout(graphNodes, layout));
       setEdges(graphEdges);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
