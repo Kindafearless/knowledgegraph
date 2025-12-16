@@ -129,16 +129,16 @@ services:
   web:
     build:
       context: ./apps/web
-      dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8080
-        - NEXT_PUBLIC_GRAPH_SERVICE_URL=http://localhost:8001
-        - NEXT_PUBLIC_LLM_SERVICE_URL=http://localhost:8002
-        - NEXT_PUBLIC_CCV_SERVICE_URL=http://localhost:8003
-        - NEXT_PUBLIC_CCV_WS_URL=ws://localhost:8003
+      dockerfile: Dockerfile.dev
     container_name: kg-web
     environment:
       - NODE_ENV=development
+      - NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8080
+      - NEXT_PUBLIC_GRAPH_SERVICE_URL=http://localhost:8001
+      - NEXT_PUBLIC_LLM_SERVICE_URL=http://localhost:8002
+      - NEXT_PUBLIC_CCV_SERVICE_URL=http://localhost:8003
+      - NEXT_PUBLIC_CCV_WS_URL=ws://localhost:8003
+      - NEXT_PUBLIC_LOCAL_MODE=true
     ports:
       - "3001:3000"
     depends_on:

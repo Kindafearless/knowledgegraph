@@ -3,9 +3,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode, useState } from 'react';
 import { ReactFlowProvider } from 'reactflow';
+import { useAuthInit } from '@/hooks/use-auth';
 
 interface ProvidersProps {
   children: ReactNode;
+}
+
+function AuthInitializer({ children }: { children: ReactNode }) {
+  useAuthInit();
+  return <>{children}</>;
 }
 
 export function Providers({ children }: ProvidersProps) {
@@ -23,7 +29,9 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ReactFlowProvider>{children}</ReactFlowProvider>
+      <ReactFlowProvider>
+        <AuthInitializer>{children}</AuthInitializer>
+      </ReactFlowProvider>
     </QueryClientProvider>
   );
 }
