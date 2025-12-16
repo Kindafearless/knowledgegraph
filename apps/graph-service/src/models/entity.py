@@ -23,7 +23,7 @@ class Entity(BaseModel):
 
     id: UUID = Field(default_factory=uuid4)
     name: str
-    type: EntityType
+    type: str  # Dynamic type from entity_types table
     properties: dict[str, Any] = Field(default_factory=dict)
     data_source: str | None = None
     classification: str = "unclassified"
@@ -36,7 +36,7 @@ class EntityCreate(BaseModel):
     """Schema for creating an entity."""
 
     name: str
-    type: EntityType
+    type: str  # Dynamic type from entity_types table
     properties: dict[str, Any] = Field(default_factory=dict)
     data_source: str | None = None
     classification: str = "unclassified"
