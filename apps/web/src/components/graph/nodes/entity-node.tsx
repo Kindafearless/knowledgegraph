@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Building2, FileText, User, Lightbulb, Box } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useGraphStore } from '@/stores/graph-store';
 
 interface EntityNodeData {
   label: string;
@@ -33,6 +34,7 @@ export const EntityNode = memo(function EntityNode({
   data,
   selected,
 }: NodeProps<EntityNodeData>) {
+  const showLabels = useGraphStore((state) => state.showLabels);
   const Icon = nodeIcons[data.type] || Box;
   const colorClass = nodeColors[data.type] || nodeColors.entity;
 
@@ -46,18 +48,21 @@ export const EntityNode = memo(function EntityNode({
 
       <div
         className={cn(
-          'px-4 py-3 rounded-lg border-2 min-w-[120px] max-w-[200px]',
-          'shadow-sm transition-all duration-200',
+          'rounded-lg border-2 shadow-sm transition-all duration-200',
+          showLabels ? 'px-4 py-3 min-w-[120px] max-w-[200px]' : 'p-2',
           colorClass,
           selected && 'ring-2 ring-ring ring-offset-2 ring-offset-background shadow-lg'
         )}
+        title={data.label}
       >
         <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 flex-shrink-0" />
-          <span className="font-medium text-sm truncate">{data.label}</span>
+          <Icon className={cn('flex-shrink-0', showLabels ? 'h-4 w-4' : 'h-5 w-5')} />
+          {showLabels && (
+            <span className="font-medium text-sm truncate">{data.label}</span>
+          )}
         </div>
 
-        {data.classification && (
+        {showLabels && data.classification && (
           <div className="mt-1">
             <span className="text-xs px-1.5 py-0.5 rounded bg-background/50 text-muted-foreground">
               {data.classification}
