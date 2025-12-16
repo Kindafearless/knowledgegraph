@@ -134,6 +134,12 @@ services:
     container_name: kg-web
     environment:
       - NODE_ENV=development
+      # Server-side URLs (for API routes running inside container)
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - GRAPH_SERVICE_URL=http://graph-service:8001
+      - LLM_SERVICE_URL=http://llm-service:8002
+      - CCV_SERVICE_URL=http://ccv-service:8003
+      # Client-side URLs (for browser requests - use localhost for host access)
       - NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8080
       - NEXT_PUBLIC_GRAPH_SERVICE_URL=http://localhost:8001
       - NEXT_PUBLIC_LLM_SERVICE_URL=http://localhost:8002
