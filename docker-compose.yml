@@ -45,6 +45,7 @@ services:
       - JWT_SECRET=dev-jwt-secret-change-in-production
       - LOCAL_MODE=true
       - ENVIRONMENT=development
+      - CORS_ORIGINS=http://localhost:3001,http://localhost:3000
     ports:
       - "8080:8080"
     depends_on:
