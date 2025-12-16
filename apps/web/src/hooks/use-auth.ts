@@ -34,8 +34,8 @@ export function useAuthInit() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              email: 'admin@example.com',
-              password: 'admin123',
+              username: 'admin@example.com',
+              password: 'password123',
             }),
           });
 
