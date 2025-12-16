@@ -1,23 +1,37 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 
 const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'http://localhost:8080';
 
+// Module-level flag to prevent multiple init attempts across all component instances
+// This persists across React re-renders and StrictMode double-invocations
+let authInitInProgress = false;
+let authInitCompleted = false;
+
 export function useAuthInit() {
-  const { setUser, setAccessToken, setLoading, accessToken } = useAuthStore();
-  const initAttempted = useRef(false);
+  const { setUser, setAccessToken, setLoading } = useAuthStore();
 
   useEffect(() => {
-    // Only run once
-    if (initAttempted.current) {
+    // Skip if init already completed or in progress
+    if (authInitCompleted || authInitInProgress) {
       return;
     }
-    initAttempted.current = true;
+    authInitInProgress = true;
 
     const initAuth = async () => {
-      const currentToken = useAuthStore.getState().accessToken;
+      const state = useAuthStore.getState();
+      const currentToken = state.accessToken;
+      const currentUser = state.user;
+
+      // If we already have both token and user, we're already authenticated
+      if (currentToken && currentUser) {
+        setLoading(false);
+        authInitCompleted = true;
+        authInitInProgress = false;
+        return;
+      }
 
       // Check for local dev mode - auto-login with test user
       const isLocalDev = process.env.NODE_ENV === 'development' ||
@@ -65,6 +79,8 @@ export function useAuthInit() {
           console.warn('Auth service not reachable:', error);
         }
         setLoading(false);
+        authInitCompleted = true;
+        authInitInProgress = false;
         return;
       }
 
@@ -107,6 +123,8 @@ export function useAuthInit() {
       }
 
       setLoading(false);
+      authInitCompleted = true;
+      authInitInProgress = false;
     };
 
     initAuth();
