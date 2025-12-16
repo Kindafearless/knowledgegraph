@@ -58,6 +58,30 @@ async def search_terms(
     return await service.search_terms(query=q, domain=domain, limit=limit)
 
 
+@router.get("/similar")
+async def find_similar_terms(
+    service: Annotated[TermService, Depends(get_term_service)],
+    q: str = Query(..., min_length=2),
+    threshold: float = Query(0.3, ge=0.0, le=1.0),
+    limit: int = Query(5, ge=1, le=20),
+    exclude_id: UUID | None = None,
+) -> list[dict]:
+    """Find terms similar to the given text for collision detection.
+
+    Returns potential matches using fuzzy text matching. Use this to warn users
+    about potential duplicates when creating or updating terms.
+
+    - threshold: Minimum similarity score (0-1, default 0.3)
+    - exclude_id: Term ID to exclude from results (useful when editing)
+    """
+    return await service.find_similar_terms(
+        search_text=q,
+        threshold=threshold,
+        limit=limit,
+        exclude_id=exclude_id,
+    )
+
+
 @router.get("/{term_id}", response_model=TermWithDetails)
 async def get_term(
     term_id: UUID,

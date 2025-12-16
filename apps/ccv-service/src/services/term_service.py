@@ -398,6 +398,113 @@ class TermService:
             return True
         return False
 
+    async def find_similar_terms(
+        self,
+        search_text: str,
+        threshold: float = 0.5,
+        limit: int = 5,
+        exclude_id: UUID | None = None,
+    ) -> list[dict]:
+        """Find terms similar to the given text using fuzzy matching.
+
+        Uses trigram similarity for fuzzy matching. Returns potential collisions
+        when creating or updating terms.
+        """
+        if not search_text or len(search_text) < 2:
+            return []
+
+        # Query for similar terms using trigram similarity and phonetic matching
+        result = await self.session.execute(
+            text("""
+                SELECT
+                    id,
+                    canonical_name,
+                    definition,
+                    domain,
+                    similarity(LOWER(canonical_name), LOWER(:search_text)) as name_similarity,
+                    CASE
+                        WHEN LOWER(canonical_name) = LOWER(:search_text) THEN 'exact'
+                        WHEN LOWER(canonical_name) LIKE LOWER(:prefix_pattern) THEN 'prefix'
+                        WHEN LOWER(canonical_name) LIKE LOWER(:like_pattern) THEN 'contains'
+                        ELSE 'similar'
+                    END as match_type
+                FROM ccv_terms
+                WHERE
+                    (similarity(LOWER(canonical_name), LOWER(:search_text)) > :threshold
+                     OR LOWER(canonical_name) LIKE LOWER(:like_pattern))
+                    AND (:exclude_id IS NULL OR id != :exclude_id)
+                ORDER BY
+                    CASE WHEN LOWER(canonical_name) = LOWER(:search_text) THEN 0 ELSE 1 END,
+                    name_similarity DESC
+                LIMIT :limit
+            """),
+            {
+                "search_text": search_text,
+                "threshold": threshold,
+                "prefix_pattern": f"{search_text}%",
+                "like_pattern": f"%{search_text}%",
+                "exclude_id": exclude_id,
+                "limit": limit,
+            }
+        )
+
+        rows = result.fetchall()
+        similar_terms = []
+
+        for row in rows:
+            similar_terms.append({
+                "id": str(row.id),
+                "canonical_name": row.canonical_name,
+                "definition": row.definition,
+                "domain": row.domain,
+                "similarity": round(float(row.name_similarity), 2),
+                "match_type": row.match_type,
+            })
+
+        # Also check synonyms for potential collisions
+        syn_result = await self.session.execute(
+            text("""
+                SELECT DISTINCT
+                    t.id,
+                    t.canonical_name,
+                    t.definition,
+                    t.domain,
+                    s.synonym as matched_synonym,
+                    similarity(LOWER(s.synonym), LOWER(:search_text)) as syn_similarity
+                FROM ccv_synonyms s
+                JOIN ccv_terms t ON s.term_id = t.id
+                WHERE
+                    (similarity(LOWER(s.synonym), LOWER(:search_text)) > :threshold
+                     OR LOWER(s.synonym) LIKE LOWER(:like_pattern))
+                    AND (:exclude_id IS NULL OR t.id != :exclude_id)
+                ORDER BY syn_similarity DESC
+                LIMIT :limit
+            """),
+            {
+                "search_text": search_text,
+                "threshold": threshold,
+                "like_pattern": f"%{search_text}%",
+                "exclude_id": exclude_id,
+                "limit": limit,
+            }
+        )
+
+        seen_ids = {t["id"] for t in similar_terms}
+        for row in syn_result.fetchall():
+            if str(row.id) not in seen_ids:
+                similar_terms.append({
+                    "id": str(row.id),
+                    "canonical_name": row.canonical_name,
+                    "definition": row.definition,
+                    "domain": row.domain,
+                    "similarity": round(float(row.syn_similarity), 2),
+                    "match_type": "synonym",
+                    "matched_synonym": row.matched_synonym,
+                })
+                seen_ids.add(str(row.id))
+
+        return similar_terms[:limit]
+
     async def find_or_create_term(
         self,
         canonical_name: str,

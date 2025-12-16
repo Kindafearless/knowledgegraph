@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save, Tag, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { X, Plus, Trash2, Save, Tag, ChevronRight, AlertTriangle } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
   useTerm,
@@ -11,8 +11,9 @@ import {
   useRemoveSynonym,
   useAncestors,
   useSearchTerms,
+  useSimilarTerms,
 } from '@/hooks/use-ccv';
-import { CCVTerm, CCVSynonym } from '@/lib/api/ccv';
+import { CCVTerm, CCVSynonym, SimilarTerm } from '@/lib/api/ccv';
 
 interface TermEditorProps {
   termId?: string | null;
@@ -38,6 +39,26 @@ export function TermEditor({ termId, isOpen, onClose, onSaved }: TermEditorProps
   const updateTerm = useUpdateTerm();
   const addSynonym = useAddSynonym();
   const removeSynonym = useRemoveSynonym();
+
+  // Check for similar terms (potential collisions)
+  const { data: similarTerms, isLoading: isSimilarLoading } = useSimilarTerms(
+    canonicalName,
+    {
+      excludeId: termId || undefined,
+      threshold: 0.3,
+      limit: 5,
+    }
+  );
+
+  // Filter out exact matches if we're editing (they would be the same term)
+  const potentialCollisions = useMemo(() => {
+    if (!similarTerms) return [];
+    return similarTerms.filter(
+      (t) => t.id !== termId && (t.match_type === 'exact' || t.similarity >= 0.5)
+    );
+  }, [similarTerms, termId]);
+
+  const hasExactMatch = potentialCollisions.some((t) => t.match_type === 'exact');
 
   const isEditing = !!termId;
 
@@ -151,8 +172,86 @@ export function TermEditor({ termId, isOpen, onClose, onSaved }: TermEditorProps
                   value={canonicalName}
                   onChange={(e) => setCanonicalName(e.target.value)}
                   placeholder="Enter the canonical term name"
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    hasExactMatch
+                      ? 'border-red-500 focus:ring-red-500'
+                      : potentialCollisions.length > 0
+                      ? 'border-amber-500 focus:ring-amber-500'
+                      : 'border-gray-200 dark:border-gray-600'
+                  }`}
                 />
+
+                {/* Collision Warning */}
+                {potentialCollisions.length > 0 && (
+                  <div
+                    className={`mt-2 p-3 rounded-md ${
+                      hasExactMatch
+                        ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                        : 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle
+                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                          hasExactMatch ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'
+                        }`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-sm font-medium ${
+                            hasExactMatch
+                              ? 'text-red-800 dark:text-red-300'
+                              : 'text-amber-800 dark:text-amber-300'
+                          }`}
+                        >
+                          {hasExactMatch
+                            ? 'Duplicate term detected!'
+                            : 'Similar terms found'}
+                        </p>
+                        <p
+                          className={`text-xs mt-0.5 ${
+                            hasExactMatch
+                              ? 'text-red-700 dark:text-red-400'
+                              : 'text-amber-700 dark:text-amber-400'
+                          }`}
+                        >
+                          {hasExactMatch
+                            ? 'A term with this exact name already exists.'
+                            : 'Consider using an existing term or adding this as a synonym.'}
+                        </p>
+                        <ul className="mt-2 space-y-1">
+                          {potentialCollisions.map((collision) => (
+                            <li
+                              key={collision.id}
+                              className={`text-xs p-1.5 rounded flex items-center justify-between ${
+                                collision.match_type === 'exact'
+                                  ? 'bg-red-100 dark:bg-red-900/30'
+                                  : 'bg-amber-100 dark:bg-amber-900/30'
+                              }`}
+                            >
+                              <span className="font-medium truncate">{collision.canonical_name}</span>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                  collision.match_type === 'exact'
+                                    ? 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200'
+                                    : collision.match_type === 'synonym'
+                                    ? 'bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200'
+                                    : 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'
+                                }`}
+                              >
+                                {collision.match_type === 'exact'
+                                  ? 'exact'
+                                  : collision.match_type === 'synonym'
+                                  ? `via: ${collision.matched_synonym}`
+                                  : `${Math.round(collision.similarity * 100)}% similar`}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Definition */}
@@ -296,8 +395,9 @@ export function TermEditor({ termId, isOpen, onClose, onSaved }: TermEditorProps
             </button>
             <button
               onClick={handleSave}
-              disabled={isSaving || !canonicalName.trim()}
+              disabled={isSaving || !canonicalName.trim() || hasExactMatch}
               className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              title={hasExactMatch ? 'Cannot save: a term with this name already exists' : undefined}
             >
               <Save className="w-4 h-4" />
               {isSaving ? 'Saving...' : 'Save'}

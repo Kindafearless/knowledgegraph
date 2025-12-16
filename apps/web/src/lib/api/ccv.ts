@@ -134,6 +134,40 @@ export async function searchTerms(query: string, domain?: string): Promise<CCVTe
   return response.json();
 }
 
+export interface SimilarTerm {
+  id: string;
+  canonical_name: string;
+  definition: string | null;
+  domain: string | null;
+  similarity: number;
+  match_type: 'exact' | 'prefix' | 'contains' | 'similar' | 'synonym';
+  matched_synonym?: string;
+}
+
+export async function findSimilarTerms(
+  query: string,
+  options?: {
+    threshold?: number;
+    limit?: number;
+    excludeId?: string;
+  }
+): Promise<SimilarTerm[]> {
+  const searchParams = new URLSearchParams({ q: query });
+  if (options?.threshold !== undefined) {
+    searchParams.set('threshold', options.threshold.toString());
+  }
+  if (options?.limit !== undefined) {
+    searchParams.set('limit', options.limit.toString());
+  }
+  if (options?.excludeId) {
+    searchParams.set('exclude_id', options.excludeId);
+  }
+
+  const response = await fetch(`/api/ccv/terms/similar?${searchParams}`);
+  if (!response.ok) throw new Error('Failed to find similar terms');
+  return response.json();
+}
+
 // Synonyms API
 export async function addSynonym(
   termId: string,

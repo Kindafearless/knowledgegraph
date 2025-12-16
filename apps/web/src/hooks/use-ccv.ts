@@ -44,6 +44,27 @@ export function useSearchTerms(query: string, domain?: string) {
   });
 }
 
+export function useSimilarTerms(
+  query: string,
+  options?: {
+    threshold?: number;
+    limit?: number;
+    excludeId?: string;
+    enabled?: boolean;
+  }
+) {
+  return useQuery({
+    queryKey: [...ccvKeys.terms(), 'similar', query, options?.excludeId],
+    queryFn: () => ccvApi.findSimilarTerms(query, {
+      threshold: options?.threshold,
+      limit: options?.limit,
+      excludeId: options?.excludeId,
+    }),
+    enabled: (options?.enabled ?? true) && query.length >= 2,
+    staleTime: 5000, // Keep results for 5 seconds while typing
+  });
+}
+
 export function useCreateTerm() {
   const queryClient = useQueryClient();
 
