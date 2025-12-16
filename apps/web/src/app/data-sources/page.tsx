@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { useAuthStore } from '@/stores/auth-store';
-import { Database, Plus, RefreshCw, Settings, Loader2, AlertCircle, Trash2 } from 'lucide-react';
+import { Database, Plus, RefreshCw, Settings, Loader2, AlertCircle, Trash2, X, FileText, Globe, Server } from 'lucide-react';
 
 interface DataSource {
   id: string;
@@ -17,12 +17,21 @@ interface DataSource {
   config?: Record<string, unknown>;
 }
 
+const DATA_SOURCE_TYPES = [
+  { id: 'documents', name: 'Documents', icon: FileText, description: 'Import from PDF, Word, or text files' },
+  { id: 'api', name: 'API', icon: Globe, description: 'Connect to external REST APIs' },
+  { id: 'database', name: 'Database', icon: Server, description: 'Import from SQL or NoSQL databases' },
+];
+
 export default function DataSourcesPage() {
   const { isAuthenticated, isLoading: authLoading, accessToken } = useAuthStore();
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newSource, setNewSource] = useState({ name: '', type: 'documents', url: '' });
+  const [isCreating, setIsCreating] = useState(false);
 
   const fetchDataSources = useCallback(async () => {
     if (!accessToken) return;
@@ -52,6 +61,39 @@ export default function DataSourcesPage() {
     }
   }, [accessToken]);
 
+  const createDataSource = async () => {
+    if (!accessToken || !newSource.name.trim()) return;
+
+    setIsCreating(true);
+    try {
+      const response = await fetch('/api/datasources', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newSource.name,
+          type: newSource.type,
+          config: newSource.url ? { url: newSource.url } : {},
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create data source');
+      }
+
+      setShowAddModal(false);
+      setNewSource({ name: '', type: 'documents', url: '' });
+      fetchDataSources();
+    } catch (err) {
+      console.error('Error creating data source:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create data source');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const triggerSync = async (sourceId: string) => {
     if (!accessToken) return;
 
@@ -70,7 +112,6 @@ export default function DataSourcesPage() {
         throw new Error('Failed to trigger sync');
       }
 
-      // Refresh data sources after a short delay
       setTimeout(() => {
         fetchDataSources();
         setSyncingIds(prev => {
@@ -157,7 +198,10 @@ export default function DataSourcesPage() {
                   <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+                >
                   <Plus className="h-4 w-4" />
                   Add Source
                 </button>
@@ -182,6 +226,13 @@ export default function DataSourcesPage() {
                     <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No data sources configured</p>
                     <p className="text-sm mt-2">Add a data source to start building your knowledge graph</p>
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Your First Source
+                    </button>
                   </div>
                 ) : (
                   dataSources.map((source) => (
@@ -227,6 +278,95 @@ export default function DataSourcesPage() {
           </div>
         </main>
       </div>
+
+      {/* Add Data Source Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card border border-border rounded-lg w-full max-w-lg mx-4 shadow-xl">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h2 className="text-lg font-semibold">Add Data Source</h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="p-1 hover:bg-accent rounded-md"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Name</label>
+                <input
+                  type="text"
+                  value={newSource.name}
+                  onChange={(e) => setNewSource({ ...newSource, name: e.target.value })}
+                  placeholder="My Data Source"
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Type</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {DATA_SOURCE_TYPES.map((type) => (
+                    <button
+                      key={type.id}
+                      onClick={() => setNewSource({ ...newSource, type: type.id })}
+                      className={`p-3 border rounded-lg text-center transition-colors ${
+                        newSource.type === type.id
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <type.icon className="h-6 w-6 mx-auto mb-1" />
+                      <p className="text-sm font-medium">{type.name}</p>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {DATA_SOURCE_TYPES.find(t => t.id === newSource.type)?.description}
+                </p>
+              </div>
+
+              {(newSource.type === 'api' || newSource.type === 'database') && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    {newSource.type === 'api' ? 'API URL' : 'Connection String'}
+                  </label>
+                  <input
+                    type="text"
+                    value={newSource.url}
+                    onChange={(e) => setNewSource({ ...newSource, url: e.target.value })}
+                    placeholder={newSource.type === 'api' ? 'https://api.example.com/data' : 'postgresql://...'}
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background font-mono text-sm"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 p-4 border-t border-border">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 border border-input rounded-md hover:bg-accent"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createDataSource}
+                disabled={!newSource.name.trim() || isCreating}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isCreating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                Add Source
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
