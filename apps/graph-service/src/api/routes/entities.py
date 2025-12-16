@@ -30,7 +30,7 @@ async def list_entities(
     search: str | None = None,
 ) -> list[Entity]:
     """List entities with pagination and filtering."""
-    check_permission(request, "graph:entity:read")
+    check_permission(request, "entity:read")
 
     return await service.list_entities(
         page=page,
@@ -50,7 +50,7 @@ async def get_entity(
     service: Annotated[EntityService, Depends(get_entity_service)],
 ) -> Entity:
     """Get a specific entity by ID."""
-    check_permission(request, "graph:entity:read")
+    check_permission(request, "entity:read")
 
     entity = await service.get_entity(
         entity_id,
@@ -129,7 +129,7 @@ async def get_entity_relationships(
     direction: str = Query("both", regex="^(incoming|outgoing|both)$"),
 ) -> list:
     """Get relationships for an entity."""
-    check_permission(request, "graph:entity:read")
+    check_permission(request, "entity:read")
 
     return await service.get_entity_relationships(
         entity_id,

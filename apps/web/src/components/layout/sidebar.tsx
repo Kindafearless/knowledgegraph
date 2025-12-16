@@ -11,19 +11,38 @@ import {
   Settings,
   Users,
   FileSearch,
-  ChevronLeft,
+  ChevronDown,
   ChevronRight,
   Shield,
   PanelLeftClose,
   PanelLeft,
+  Table,
+  Plug,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
 
-const navigation = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  permission?: string;
+  children?: NavItem[];
+}
+
+const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Graph Explorer', href: '/graph', icon: Network },
-  { name: 'Data Sources', href: '/data-sources', icon: Database, permission: 'datasource:read' },
+  {
+    name: 'Data Sources',
+    href: '/data-sources',
+    icon: Database,
+    permission: 'datasource:read',
+    children: [
+      { name: 'Connections', href: '/data-sources', icon: Plug },
+      { name: 'Data Explorer', href: '/data-sources/explore', icon: Table },
+    ],
+  },
   { name: 'Vocabulary (CCV)', href: '/ccv', icon: BookOpen },
   { name: 'Search', href: '/search', icon: FileSearch },
 ];
@@ -36,6 +55,7 @@ const adminNavigation = [
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set(['Data Sources']));
   const { hasPermission, user } = useAuthStore();
   const pathname = usePathname();
 
@@ -51,7 +71,26 @@ export function Sidebar() {
     if (href === '/') {
       return pathname === '/';
     }
-    return pathname.startsWith(href);
+    return pathname === href;
+  };
+
+  const isParentActive = (item: NavItem) => {
+    if (item.children) {
+      return item.children.some((child) => pathname === child.href || pathname.startsWith(child.href + '/'));
+    }
+    return pathname.startsWith(item.href);
+  };
+
+  const toggleMenu = (name: string) => {
+    setExpandedMenus((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
   };
 
   return (
@@ -76,20 +115,64 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-4">
         <div className="px-3 space-y-1">
           {filteredNav.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium',
-                'transition-colors',
-                isActive(item.href)
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+            <div key={item.name}>
+              {item.children && !collapsed ? (
+                <>
+                  <button
+                    onClick={() => toggleMenu(item.name)}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium w-full',
+                      'transition-colors',
+                      isParentActive(item)
+                        ? 'text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    )}
+                  >
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="flex-1 text-left">{item.name}</span>
+                    {expandedMenus.has(item.name) ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </button>
+                  {expandedMenus.has(item.name) && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      {item.children.map((child) => (
+                        <Link
+                          key={child.name}
+                          href={child.href}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium',
+                            'transition-colors',
+                            isActive(child.href)
+                              ? 'bg-primary text-primary-foreground'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                          )}
+                        >
+                          <child.icon className="h-4 w-4 flex-shrink-0" />
+                          <span>{child.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium',
+                    'transition-colors',
+                    isActive(item.href) || isParentActive(item)
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  )}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && <span>{item.name}</span>}
+                </Link>
               )}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && <span>{item.name}</span>}
-            </Link>
+            </div>
           ))}
         </div>
 
