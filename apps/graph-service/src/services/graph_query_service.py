@@ -168,23 +168,25 @@ class GraphQueryService:
     ) -> GraphSubset:
         """Search the graph using text query."""
         sql = """
-            SELECT id, name, type, properties, data_source, classification,
-                   created_at, updated_at, created_by
-            FROM entities
-            WHERE (name ILIKE :search OR properties::text ILIKE :search)
+            SELECT
+                e.id,
+                e.name,
+                et.name as type,
+                e.properties,
+                ds.name as data_source,
+                e.classification_level as classification,
+                e.created_at,
+                e.updated_at
+            FROM entities e
+            LEFT JOIN entity_types et ON e.type_id = et.id
+            LEFT JOIN data_sources ds ON e.data_source_id = ds.id
+            WHERE (e.name ILIKE :search OR e.properties::text ILIKE :search)
         """
         params: dict[str, Any] = {"search": f"%{query}%", "limit": limit}
 
         if entity_types:
-            sql += " AND type = ANY(:entity_types)"
+            sql += " AND et.name = ANY(:entity_types)"
             params["entity_types"] = entity_types
-
-        if user_data_sources:
-            sql += " AND (data_source IS NULL OR data_source = ANY(:user_sources))"
-            params["user_sources"] = user_data_sources
-
-        sql += " AND classification <= :user_classification"
-        params["user_classification"] = user_classification
 
         sql += " LIMIT :limit"
 
@@ -195,13 +197,12 @@ class GraphQueryService:
             Entity(
                 id=row.id,
                 name=row.name,
-                type=row.type,
+                type=row.type or "Unknown",
                 properties=row.properties or {},
                 data_source=row.data_source,
-                classification=row.classification,
+                classification=row.classification or "unclassified",
                 created_at=row.created_at,
                 updated_at=row.updated_at,
-                created_by=row.created_by,
             )
             for row in rows
         ]
@@ -228,20 +229,9 @@ class GraphQueryService:
         user_classification: str = "unclassified",
     ) -> list[dict]:
         """Get top nodes by centrality measure."""
-        if algorithm == "degree":
-            return await self._degree_centrality(
-                limit, user_data_sources, user_classification
-            )
-        elif algorithm == "pagerank":
-            # Simplified PageRank approximation using degree
-            return await self._degree_centrality(
-                limit, user_data_sources, user_classification
-            )
-        else:
-            # For betweenness and closeness, fall back to degree for now
-            return await self._degree_centrality(
-                limit, user_data_sources, user_classification
-            )
+        return await self._degree_centrality(
+            limit, user_data_sources, user_classification
+        )
 
     async def _degree_centrality(
         self,
@@ -251,22 +241,16 @@ class GraphQueryService:
     ) -> list[dict]:
         """Calculate degree centrality."""
         sql = """
-            SELECT e.id, e.name, e.type,
+            SELECT e.id, e.name, et.name as type,
                    COUNT(DISTINCT r.id) as degree
             FROM entities e
-            LEFT JOIN relationships r ON (e.id = r.source_id OR e.id = r.target_id)
-            WHERE e.classification <= :user_classification
+            LEFT JOIN entity_types et ON e.type_id = et.id
+            LEFT JOIN relationships r ON (e.id = r.source_entity_id OR e.id = r.target_entity_id)
+            GROUP BY e.id, e.name, et.name
+            ORDER BY degree DESC
+            LIMIT :limit
         """
-        params: dict[str, Any] = {
-            "user_classification": user_classification,
-            "limit": limit,
-        }
-
-        if user_data_sources:
-            sql += " AND (e.data_source IS NULL OR e.data_source = ANY(:user_sources))"
-            params["user_sources"] = user_data_sources
-
-        sql += " GROUP BY e.id, e.name, e.type ORDER BY degree DESC LIMIT :limit"
+        params: dict[str, Any] = {"limit": limit}
 
         result = await self.session.execute(text(sql), params)
         rows = result.fetchall()
@@ -287,29 +271,22 @@ class GraphQueryService:
         user_classification: str = "unclassified",
     ) -> list[dict]:
         """Detect communities using connected components."""
-        # Simplified community detection - group by entity type
         sql = """
-            SELECT type, COUNT(*) as member_count, array_agg(id) as member_ids
-            FROM entities
-            WHERE classification <= :user_classification
+            SELECT et.name as type, COUNT(*) as member_count, array_agg(e.id) as member_ids
+            FROM entities e
+            LEFT JOIN entity_types et ON e.type_id = et.id
+            GROUP BY et.name
         """
-        params: dict[str, Any] = {"user_classification": user_classification}
 
-        if user_data_sources:
-            sql += " AND (data_source IS NULL OR data_source = ANY(:user_sources))"
-            params["user_sources"] = user_data_sources
-
-        sql += " GROUP BY type"
-
-        result = await self.session.execute(text(sql), params)
+        result = await self.session.execute(text(sql))
         rows = result.fetchall()
 
         return [
             {
                 "community_id": idx,
-                "label": row.type,
+                "label": row.type or "Unknown",
                 "member_count": row.member_count,
-                "member_ids": [str(mid) for mid in row.member_ids[:10]],
+                "member_ids": [str(mid) for mid in (row.member_ids or [])[:10]],
             }
             for idx, row in enumerate(rows)
         ]
@@ -322,19 +299,21 @@ class GraphQueryService:
     ) -> Entity | None:
         """Get a single node by ID."""
         sql = """
-            SELECT id, name, type, properties, data_source, classification,
-                   created_at, updated_at, created_by
-            FROM entities
-            WHERE id = :node_id AND classification <= :user_classification
+            SELECT
+                e.id,
+                e.name,
+                et.name as type,
+                e.properties,
+                ds.name as data_source,
+                e.classification_level as classification,
+                e.created_at,
+                e.updated_at
+            FROM entities e
+            LEFT JOIN entity_types et ON e.type_id = et.id
+            LEFT JOIN data_sources ds ON e.data_source_id = ds.id
+            WHERE e.id = :node_id
         """
-        params: dict[str, Any] = {
-            "node_id": node_id,
-            "user_classification": user_classification,
-        }
-
-        if user_data_sources:
-            sql += " AND (data_source IS NULL OR data_source = ANY(:user_sources))"
-            params["user_sources"] = user_data_sources
+        params: dict[str, Any] = {"node_id": node_id}
 
         result = await self.session.execute(text(sql), params)
         row = result.fetchone()
@@ -345,13 +324,12 @@ class GraphQueryService:
         return Entity(
             id=row.id,
             name=row.name,
-            type=row.type,
+            type=row.type or "Unknown",
             properties=row.properties or {},
             data_source=row.data_source,
-            classification=row.classification,
+            classification=row.classification or "unclassified",
             created_at=row.created_at,
             updated_at=row.updated_at,
-            created_by=row.created_by,
         )
 
     async def _get_node_relationships(
@@ -364,30 +342,34 @@ class GraphQueryService:
     ) -> list[Relationship]:
         """Get relationships for a node."""
         if direction == "outgoing":
-            condition = "source_id = :node_id"
+            condition = "r.source_entity_id = :node_id"
         elif direction == "incoming":
-            condition = "target_id = :node_id"
+            condition = "r.target_entity_id = :node_id"
         else:
-            condition = "(source_id = :node_id OR target_id = :node_id)"
+            condition = "(r.source_entity_id = :node_id OR r.target_entity_id = :node_id)"
 
         sql = f"""
-            SELECT id, source_id, target_id, type, properties, weight,
-                   data_source, classification, created_at, updated_at, created_by
-            FROM relationships
-            WHERE {condition} AND classification <= :user_classification
+            SELECT
+                r.id,
+                r.source_entity_id as source_id,
+                r.target_entity_id as target_id,
+                rt.name as type,
+                r.properties,
+                r.confidence as weight,
+                ds.name as data_source,
+                'unclassified' as classification,
+                r.created_at,
+                r.updated_at
+            FROM relationships r
+            LEFT JOIN relationship_types rt ON r.type_id = rt.id
+            LEFT JOIN data_sources ds ON r.data_source_id = ds.id
+            WHERE {condition}
         """
-        params: dict[str, Any] = {
-            "node_id": node_id,
-            "user_classification": user_classification,
-        }
+        params: dict[str, Any] = {"node_id": node_id}
 
         if relationship_types:
-            sql += " AND type = ANY(:rel_types)"
+            sql += " AND rt.name = ANY(:rel_types)"
             params["rel_types"] = relationship_types
-
-        if user_data_sources:
-            sql += " AND (data_source IS NULL OR data_source = ANY(:user_sources))"
-            params["user_sources"] = user_data_sources
 
         result = await self.session.execute(text(sql), params)
         rows = result.fetchall()
@@ -397,14 +379,13 @@ class GraphQueryService:
                 id=row.id,
                 source_id=row.source_id,
                 target_id=row.target_id,
-                type=row.type,
+                type=row.type or "RELATED_TO",
                 properties=row.properties or {},
-                weight=row.weight,
+                weight=row.weight or 1.0,
                 data_source=row.data_source,
                 classification=row.classification,
                 created_at=row.created_at,
                 updated_at=row.updated_at,
-                created_by=row.created_by,
             )
             for row in rows
         ]
@@ -417,20 +398,23 @@ class GraphQueryService:
     ) -> list[Relationship]:
         """Get relationships between a set of nodes."""
         sql = """
-            SELECT id, source_id, target_id, type, properties, weight,
-                   data_source, classification, created_at, updated_at, created_by
-            FROM relationships
-            WHERE source_id = ANY(:node_ids) AND target_id = ANY(:node_ids)
-                  AND classification <= :user_classification
+            SELECT
+                r.id,
+                r.source_entity_id as source_id,
+                r.target_entity_id as target_id,
+                rt.name as type,
+                r.properties,
+                r.confidence as weight,
+                ds.name as data_source,
+                'unclassified' as classification,
+                r.created_at,
+                r.updated_at
+            FROM relationships r
+            LEFT JOIN relationship_types rt ON r.type_id = rt.id
+            LEFT JOIN data_sources ds ON r.data_source_id = ds.id
+            WHERE r.source_entity_id = ANY(:node_ids) AND r.target_entity_id = ANY(:node_ids)
         """
-        params: dict[str, Any] = {
-            "node_ids": node_ids,
-            "user_classification": user_classification,
-        }
-
-        if user_data_sources:
-            sql += " AND (data_source IS NULL OR data_source = ANY(:user_sources))"
-            params["user_sources"] = user_data_sources
+        params: dict[str, Any] = {"node_ids": node_ids}
 
         result = await self.session.execute(text(sql), params)
         rows = result.fetchall()
@@ -440,14 +424,13 @@ class GraphQueryService:
                 id=row.id,
                 source_id=row.source_id,
                 target_id=row.target_id,
-                type=row.type,
+                type=row.type or "RELATED_TO",
                 properties=row.properties or {},
-                weight=row.weight,
+                weight=row.weight or 1.0,
                 data_source=row.data_source,
                 classification=row.classification,
                 created_at=row.created_at,
                 updated_at=row.updated_at,
-                created_by=row.created_by,
             )
             for row in rows
         ]

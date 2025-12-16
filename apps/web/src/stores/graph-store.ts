@@ -4,7 +4,7 @@ import { Node, Edge, NodeChange, EdgeChange, applyNodeChanges, applyEdgeChanges 
 export interface GraphNode extends Node {
   data: {
     label: string;
-    type: 'entity' | 'concept' | 'document' | 'person' | 'organization';
+    type: string;
     properties: Record<string, unknown>;
     dataSource?: string;
     classification?: string;
@@ -18,6 +18,25 @@ export interface GraphEdge extends Edge {
     properties: Record<string, unknown>;
     weight?: number;
   };
+}
+
+// API response types
+interface ApiEntity {
+  id: string;
+  name: string;
+  type: string;
+  properties: Record<string, unknown>;
+  data_source?: string;
+  classification?: string;
+}
+
+interface ApiRelationship {
+  id: string;
+  source_id: string;
+  target_id: string;
+  type: string;
+  properties: Record<string, unknown>;
+  weight?: number;
 }
 
 interface GraphState {
@@ -54,6 +73,46 @@ interface GraphState {
   // Query-related
   expandNode: (nodeId: string, depth?: number) => Promise<void>;
   searchAndVisualize: (query: string) => Promise<void>;
+}
+
+// Convert API entity to ReactFlow node
+function entityToNode(entity: ApiEntity, index: number): GraphNode {
+  // Position nodes in a grid pattern initially
+  const cols = 5;
+  const spacing = 200;
+  const row = Math.floor(index / cols);
+  const col = index % cols;
+
+  return {
+    id: entity.id,
+    type: entity.type?.toLowerCase() || 'entity',
+    position: { x: col * spacing + Math.random() * 50, y: row * spacing + Math.random() * 50 },
+    data: {
+      label: entity.name,
+      type: entity.type || 'Unknown',
+      properties: entity.properties || {},
+      dataSource: entity.data_source,
+      classification: entity.classification,
+    },
+  };
+}
+
+// Convert API relationship to ReactFlow edge
+function relationshipToEdge(rel: ApiRelationship): GraphEdge {
+  return {
+    id: rel.id,
+    source: rel.source_id,
+    target: rel.target_id,
+    label: rel.type,
+    animated: false,
+    style: { strokeWidth: 2 },
+    data: {
+      label: rel.type || 'RELATED_TO',
+      type: rel.type || 'RELATED_TO',
+      properties: rel.properties || {},
+      weight: rel.weight,
+    },
+  };
 }
 
 export const useGraphStore = create<GraphState>((set, get) => ({
@@ -123,7 +182,6 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     setError(null);
 
     try {
-      // Get token from auth store
       const authStore = await import('./auth-store').then(m => m.useAuthStore.getState());
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (authStore.accessToken) {
@@ -135,12 +193,17 @@ export const useGraphStore = create<GraphState>((set, get) => ({
 
       const data = await response.json();
 
-      // Merge new nodes and edges with existing ones
+      // Convert API response to ReactFlow format
       const existingNodeIds = new Set(nodes.map((n) => n.id));
       const existingEdgeIds = new Set(edges.map((e) => e.id));
 
-      const newNodes = data.nodes.filter((n: GraphNode) => !existingNodeIds.has(n.id));
-      const newEdges = data.edges.filter((e: GraphEdge) => !existingEdgeIds.has(e.id));
+      const newNodes = (data.nodes || [])
+        .filter((n: ApiEntity) => !existingNodeIds.has(n.id))
+        .map((n: ApiEntity, i: number) => entityToNode(n, nodes.length + i));
+
+      const newEdges = (data.edges || [])
+        .filter((e: ApiRelationship) => !existingEdgeIds.has(e.id))
+        .map(relationshipToEdge);
 
       setNodes([...nodes, ...newNodes]);
       setEdges([...edges, ...newEdges]);
@@ -157,7 +220,6 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     setError(null);
 
     try {
-      // Get token from auth store
       const authStore = await import('./auth-store').then(m => m.useAuthStore.getState());
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       if (authStore.accessToken) {
@@ -167,14 +229,19 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       const response = await fetch('/api/graph/search', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, limit: 100 }),
       });
 
       if (!response.ok) throw new Error('Search failed');
 
       const data = await response.json();
-      setNodes(data.nodes);
-      setEdges(data.edges);
+
+      // Convert API response to ReactFlow format
+      const graphNodes = (data.nodes || []).map((n: ApiEntity, i: number) => entityToNode(n, i));
+      const graphEdges = (data.edges || []).map(relationshipToEdge);
+
+      setNodes(graphNodes);
+      setEdges(graphEdges);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
