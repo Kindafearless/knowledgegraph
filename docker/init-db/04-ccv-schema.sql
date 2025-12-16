@@ -13,8 +13,29 @@ CREATE TABLE IF NOT EXISTS ccv_terms (
     usage_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by UUID,
+    approved_by UUID,
+    approved_at TIMESTAMP WITH TIME ZONE,
+    last_used_at TIMESTAMP WITH TIME ZONE,
     UNIQUE(canonical_name, domain)
 );
+
+-- Add columns if they don't exist (for existing databases)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ccv_terms' AND column_name = 'created_by') THEN
+        ALTER TABLE ccv_terms ADD COLUMN created_by UUID;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ccv_terms' AND column_name = 'approved_by') THEN
+        ALTER TABLE ccv_terms ADD COLUMN approved_by UUID;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ccv_terms' AND column_name = 'approved_at') THEN
+        ALTER TABLE ccv_terms ADD COLUMN approved_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ccv_terms' AND column_name = 'last_used_at') THEN
+        ALTER TABLE ccv_terms ADD COLUMN last_used_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+END $$;
 
 -- CCV Synonyms
 CREATE TABLE IF NOT EXISTS ccv_synonyms (
