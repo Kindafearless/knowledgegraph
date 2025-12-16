@@ -120,11 +120,31 @@
 
 /* Chat interface styles */
 .chat-message {
-  @apply animate-in fade-in slide-in-from-bottom-2 duration-300;
+  animation: chat-fade-in 0.3s ease-out;
+}
+
+@keyframes chat-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .chat-typing-indicator {
-  @apply animate-pulse-subtle;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Scrollbar styling */
