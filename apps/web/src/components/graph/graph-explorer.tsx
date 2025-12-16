@@ -11,8 +11,9 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-import { useGraphStore, GraphNode } from '@/stores/graph-store';
+import { useGraphStore, GraphNode, GraphEdge } from '@/stores/graph-store';
 import { EntityNode } from './nodes/entity-node';
+import { RelationshipEdge } from './edges/relationship-edge';
 import { GraphControls } from './graph-controls';
 import { NodeDetailsPanel } from './node-details-panel';
 
@@ -26,14 +27,18 @@ const NODE_TYPES = Object.freeze({
   organization: EntityNode,
 });
 
+const EDGE_TYPES = Object.freeze({
+  default: RelationshipEdge,
+});
+
 const DEFAULT_EDGE_OPTIONS = Object.freeze({
-  animated: false,
-  style: { strokeWidth: 2 },
+  type: 'default',
 });
 
 export function GraphExplorer() {
   // Memoize to ensure stable reference even during hot module reloading
   const nodeTypes = useMemo(() => NODE_TYPES, []);
+  const edgeTypes = useMemo(() => EDGE_TYPES, []);
   const defaultEdgeOptions = useMemo(() => DEFAULT_EDGE_OPTIONS, []);
 
   const {
@@ -48,7 +53,44 @@ export function GraphExplorer() {
     expandNode,
     isLoading,
     searchAndVisualize,
+    activeRelationshipFilters,
+    highlightedNodeIds,
   } = useGraphStore();
+
+  // Filter edges based on active relationship filters
+  const filteredEdges = useMemo(() => {
+    if (activeRelationshipFilters.size === 0) return edges;
+    return edges.filter((edge: GraphEdge) =>
+      edge.data?.type && activeRelationshipFilters.has(edge.data.type)
+    );
+  }, [edges, activeRelationshipFilters]);
+
+  // Get node IDs that are connected by visible edges
+  const connectedNodeIds = useMemo(() => {
+    const ids = new Set<string>();
+    filteredEdges.forEach((edge: GraphEdge) => {
+      ids.add(edge.source);
+      ids.add(edge.target);
+    });
+    return ids;
+  }, [filteredEdges]);
+
+  // Apply opacity to nodes not connected by visible edges (when filtering)
+  const displayNodes = useMemo(() => {
+    if (activeRelationshipFilters.size === 0) {
+      // No filtering - just apply highlighting
+      return nodes.map((node) => ({
+        ...node,
+        className: highlightedNodeIds.has(node.id) ? 'highlighted' : '',
+      }));
+    }
+    // When filtering, dim nodes that aren't connected
+    return nodes.map((node) => ({
+      ...node,
+      style: connectedNodeIds.has(node.id) ? {} : { opacity: 0.3 },
+      className: highlightedNodeIds.has(node.id) ? 'highlighted' : '',
+    }));
+  }, [nodes, activeRelationshipFilters.size, connectedNodeIds, highlightedNodeIds]);
 
   const { fitView } = useReactFlow();
   const hasInitialized = useRef(false);
@@ -114,8 +156,8 @@ export function GraphExplorer() {
   return (
     <div className="w-full h-full relative">
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={displayNodes}
+        edges={filteredEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
@@ -123,6 +165,7 @@ export function GraphExplorer() {
         onNodeDoubleClick={onNodeDoubleClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         minZoom={0.1}
         maxZoom={2}

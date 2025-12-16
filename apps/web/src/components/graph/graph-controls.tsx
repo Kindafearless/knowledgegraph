@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useGraphStore } from '@/stores/graph-store';
 import {
   LayoutGrid,
@@ -15,8 +15,14 @@ import {
   Loader2,
   Target,
   Waypoints,
+  Filter,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Highlighter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getRelationshipColor } from './edges/relationship-edge';
 
 const layouts = [
   { id: 'force', label: 'Force', icon: Network },
@@ -39,9 +45,30 @@ export function GraphControls() {
     searchAndVisualize,
     isLoading,
     nodes,
+    edges,
+    relationshipTypes,
+    activeRelationshipFilters,
+    toggleRelationshipFilter,
+    clearRelationshipFilters,
+    setSearchHighlight,
+    clearSearchHighlight,
+    highlightedNodeIds,
+    searchHighlightQuery,
   } = useGraphStore();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [highlightQuery, setHighlightQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Count edges per relationship type
+  const edgeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    edges.forEach((edge) => {
+      const type = edge.data?.type || 'RELATED_TO';
+      counts[type] = (counts[type] || 0) + 1;
+    });
+    return counts;
+  }, [edges]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,8 +82,18 @@ export function GraphControls() {
     await searchAndVisualize('*');
   };
 
+  const handleHighlight = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchHighlight(highlightQuery);
+  };
+
+  const handleClearHighlight = () => {
+    setHighlightQuery('');
+    clearSearchHighlight();
+  };
+
   return (
-    <div className="bg-card border border-border rounded-lg shadow-lg p-3 space-y-3 min-w-[280px]">
+    <div className="bg-card border border-border rounded-lg shadow-lg p-3 space-y-3 min-w-[300px] max-h-[80vh] overflow-y-auto">
       {/* Search bar */}
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="flex-1 relative">
@@ -154,12 +191,123 @@ export function GraphControls() {
         </div>
       </div>
 
+      <div className="h-px bg-border" />
+
+      {/* Highlight search */}
+      <div>
+        <p className="text-xs text-muted-foreground mb-1">Highlight Nodes</p>
+        <form onSubmit={handleHighlight} className="flex gap-2">
+          <div className="flex-1 relative">
+            <Highlighter className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Highlight matching..."
+              value={highlightQuery}
+              onChange={(e) => setHighlightQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          {searchHighlightQuery ? (
+            <button
+              type="button"
+              onClick={handleClearHighlight}
+              className="px-2 py-1.5 text-sm border border-input rounded-md hover:bg-accent"
+              title="Clear highlight"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!highlightQuery.trim()}
+              className="px-3 py-1.5 text-sm bg-amber-500 text-white rounded-md hover:bg-amber-600 disabled:opacity-50"
+            >
+              <Highlighter className="h-3 w-3" />
+            </button>
+          )}
+        </form>
+        {highlightedNodeIds.size > 0 && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+            {highlightedNodeIds.size} node{highlightedNodeIds.size !== 1 ? 's' : ''} highlighted
+          </p>
+        )}
+      </div>
+
+      {/* Relationship filters */}
+      {relationshipTypes.length > 0 && (
+        <>
+          <div className="h-px bg-border" />
+          <div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground"
+            >
+              <span className="flex items-center gap-1">
+                <Filter className="h-3 w-3" />
+                Relationship Filters
+                {activeRelationshipFilters.size > 0 && (
+                  <span className="bg-primary text-primary-foreground px-1.5 rounded-full text-[10px]">
+                    {activeRelationshipFilters.size}
+                  </span>
+                )}
+              </span>
+              {showFilters ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+
+            {showFilters && (
+              <div className="mt-2 space-y-1">
+                {activeRelationshipFilters.size > 0 && (
+                  <button
+                    onClick={clearRelationshipFilters}
+                    className="text-xs text-muted-foreground hover:text-foreground underline mb-1"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+                {relationshipTypes.map((type) => {
+                  const colors = getRelationshipColor(type);
+                  const isActive = activeRelationshipFilters.has(type);
+                  const count = edgeCounts[type] || 0;
+
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => toggleRelationshipFilter(type)}
+                      className={cn(
+                        'w-full flex items-center justify-between px-2 py-1 rounded text-xs transition-colors',
+                        isActive
+                          ? 'bg-primary/10 border border-primary'
+                          : 'hover:bg-accent border border-transparent'
+                      )}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-0.5 rounded"
+                          style={{ backgroundColor: colors.stroke }}
+                        />
+                        <span className={isActive ? 'font-medium' : ''}>{type}</span>
+                      </span>
+                      <span className="text-muted-foreground">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       {/* Stats */}
       {nodes.length > 0 && (
         <>
           <div className="h-px bg-border" />
           <div className="text-xs text-muted-foreground">
-            {nodes.length} nodes loaded
+            {nodes.length} nodes, {edges.length} edges
+            {activeRelationshipFilters.size > 0 && (
+              <span className="text-primary ml-1">
+                (filtered)
+              </span>
+            )}
           </div>
         </>
       )}

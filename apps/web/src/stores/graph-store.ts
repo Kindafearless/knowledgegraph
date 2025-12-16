@@ -52,6 +52,12 @@ interface GraphState {
   showLabels: boolean;
   showMinimap: boolean;
 
+  // Filtering
+  relationshipTypes: string[];  // All available relationship types
+  activeRelationshipFilters: Set<string>;  // Currently selected filters (empty = show all)
+  highlightedNodeIds: Set<string>;  // Nodes highlighted from search
+  searchHighlightQuery: string;  // Current search highlight query
+
   // Actions
   setNodes: (nodes: GraphNode[]) => void;
   setEdges: (edges: GraphEdge[]) => void;
@@ -69,6 +75,12 @@ interface GraphState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearGraph: () => void;
+
+  // Filtering actions
+  toggleRelationshipFilter: (type: string) => void;
+  clearRelationshipFilters: () => void;
+  setSearchHighlight: (query: string) => void;
+  clearSearchHighlight: () => void;
 
   // Query-related
   expandNode: (nodeId: string, depth?: number) => Promise<void>;
@@ -357,6 +369,10 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   layout: 'force',
   showLabels: true,
   showMinimap: true,
+  relationshipTypes: [],
+  activeRelationshipFilters: new Set<string>(),
+  highlightedNodeIds: new Set<string>(),
+  searchHighlightQuery: '',
 
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
@@ -410,7 +426,42 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       edges: [],
       selectedNodeId: null,
       selectedEdgeId: null,
+      relationshipTypes: [],
+      activeRelationshipFilters: new Set<string>(),
+      highlightedNodeIds: new Set<string>(),
+      searchHighlightQuery: '',
     }),
+
+  toggleRelationshipFilter: (type: string) =>
+    set((state) => {
+      const newFilters = new Set(state.activeRelationshipFilters);
+      if (newFilters.has(type)) {
+        newFilters.delete(type);
+      } else {
+        newFilters.add(type);
+      }
+      return { activeRelationshipFilters: newFilters };
+    }),
+
+  clearRelationshipFilters: () =>
+    set({ activeRelationshipFilters: new Set<string>() }),
+
+  setSearchHighlight: (query: string) =>
+    set((state) => {
+      if (!query.trim()) {
+        return { highlightedNodeIds: new Set<string>(), searchHighlightQuery: '' };
+      }
+      const lowerQuery = query.toLowerCase();
+      const matchingIds = new Set(
+        state.nodes
+          .filter((node) => node.data.label?.toLowerCase().includes(lowerQuery))
+          .map((node) => node.id)
+      );
+      return { highlightedNodeIds: matchingIds, searchHighlightQuery: query };
+    }),
+
+  clearSearchHighlight: () =>
+    set({ highlightedNodeIds: new Set<string>(), searchHighlightQuery: '' }),
 
   expandNode: async (nodeId: string, depth = 1) => {
     const { setLoading, setError, nodes, edges, setNodes, setEdges } = get();
@@ -477,9 +528,21 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       const graphNodes = (data.nodes || []).map((n: ApiEntity, i: number) => entityToNode(n, i));
       const graphEdges = (data.edges || []).map(relationshipToEdge);
 
+      // Extract unique relationship types for filtering
+      const types = new Set<string>();
+      graphEdges.forEach((edge: GraphEdge) => {
+        if (edge.data?.type) {
+          types.add(edge.data.type);
+        }
+      });
+      const relationshipTypes = Array.from(types).sort();
+
       // Apply current layout to nodes (passing edges for relationship-based layouts)
-      setNodes(applyLayout(graphNodes, layout, graphEdges));
-      setEdges(graphEdges);
+      set({
+        nodes: applyLayout(graphNodes, layout, graphEdges),
+        edges: graphEdges,
+        relationshipTypes,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {

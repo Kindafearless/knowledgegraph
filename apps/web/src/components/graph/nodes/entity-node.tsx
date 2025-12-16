@@ -33,8 +33,11 @@ const nodeColors: Record<string, string> = {
 export const EntityNode = memo(function EntityNode({
   data,
   selected,
+  id,
 }: NodeProps<EntityNodeData>) {
   const showLabels = useGraphStore((state) => state.showLabels);
+  const highlightedNodeIds = useGraphStore((state) => state.highlightedNodeIds);
+  const isHighlighted = highlightedNodeIds.has(id);
   const Icon = nodeIcons[data.type] || Box;
   const colorClass = nodeColors[data.type] || nodeColors.entity;
 
@@ -51,7 +54,8 @@ export const EntityNode = memo(function EntityNode({
           'rounded-lg border-2 shadow-sm transition-all duration-200',
           showLabels ? 'px-4 py-3 min-w-[120px] max-w-[200px]' : 'p-2',
           colorClass,
-          selected && 'ring-2 ring-ring ring-offset-2 ring-offset-background shadow-lg'
+          selected && 'ring-2 ring-ring ring-offset-2 ring-offset-background shadow-lg',
+          isHighlighted && 'ring-4 ring-amber-400 ring-offset-2 ring-offset-background shadow-lg animate-pulse'
         )}
         title={data.label}
       >
