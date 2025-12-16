@@ -167,6 +167,9 @@ class GraphQueryService:
         user_classification: str = "unclassified",
     ) -> GraphSubset:
         """Search the graph using text query."""
+        # Handle wildcard "*" as "load all"
+        is_load_all = query.strip() == "*" or query.strip() == ""
+
         sql = """
             SELECT
                 e.id,
@@ -180,12 +183,18 @@ class GraphQueryService:
             FROM entities e
             LEFT JOIN entity_types et ON e.type_id = et.id
             LEFT JOIN data_sources ds ON e.data_source_id = ds.id
-            WHERE (e.name ILIKE :search OR e.properties::text ILIKE :search)
         """
-        params: dict[str, Any] = {"search": f"%{query}%", "limit": limit}
+        params: dict[str, Any] = {"limit": limit}
+
+        where_added = False
+        if not is_load_all:
+            sql += " WHERE (e.name ILIKE :search OR e.properties::text ILIKE :search)"
+            params["search"] = f"%{query}%"
+            where_added = True
 
         if entity_types:
-            sql += " AND et.name = ANY(:entity_types)"
+            sql += " WHERE " if not where_added else " AND "
+            sql += "et.name = ANY(:entity_types)"
             params["entity_types"] = entity_types
 
         sql += " LIMIT :limit"
