@@ -123,7 +123,14 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     setError(null);
 
     try {
-      const response = await fetch(`/api/graph/expand/${nodeId}?depth=${depth}`);
+      // Get token from auth store
+      const authStore = await import('./auth-store').then(m => m.useAuthStore.getState());
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (authStore.accessToken) {
+        headers['Authorization'] = `Bearer ${authStore.accessToken}`;
+      }
+
+      const response = await fetch(`/api/graph/expand/${nodeId}?depth=${depth}`, { headers });
       if (!response.ok) throw new Error('Failed to expand node');
 
       const data = await response.json();
@@ -150,9 +157,16 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     setError(null);
 
     try {
+      // Get token from auth store
+      const authStore = await import('./auth-store').then(m => m.useAuthStore.getState());
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (authStore.accessToken) {
+        headers['Authorization'] = `Bearer ${authStore.accessToken}`;
+      }
+
       const response = await fetch('/api/graph/search', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ query }),
       });
 
