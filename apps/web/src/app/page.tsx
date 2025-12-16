@@ -27,8 +27,7 @@ export default function HomePage() {
           <p className="text-muted-foreground">Please sign in to continue</p>
           <button
             onClick={() => {
-              // Redirect to Cognito login
-              window.location.href = '/api/auth/login';
+              window.location.href = '/login';
             }}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
