@@ -6,12 +6,19 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255),
     password_hash VARCHAR(255),
     cognito_sub VARCHAR(255) UNIQUE,
+    -- Columns for denormalized storage (used by Go auth service)
+    roles JSONB DEFAULT '[]',
+    attributes JSONB DEFAULT '{}',
+    data_sources JSONB DEFAULT '[]',
+    classification VARCHAR(50) DEFAULT 'unclassified',
+    -- Legacy columns for compatibility
     classification_level VARCHAR(50) DEFAULT 'unclassified',
     clearance_level VARCHAR(50),
     organization VARCHAR(255),
     department VARCHAR(255),
     is_active BOOLEAN DEFAULT true,
     last_login TIMESTAMP WITH TIME ZONE,
+    last_login_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
