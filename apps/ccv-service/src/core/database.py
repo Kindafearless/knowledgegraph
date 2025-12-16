@@ -3,6 +3,7 @@
 from typing import AsyncGenerator
 
 import structlog
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.core.config import settings
@@ -29,7 +30,7 @@ async def init_db() -> None:
 
     async with engine.begin() as conn:
         # Create CCV tables if they don't exist
-        await conn.execute("""
+        await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS ccv_terms (
                 id UUID PRIMARY KEY,
                 canonical_name VARCHAR(500) NOT NULL,
@@ -47,9 +48,9 @@ async def init_db() -> None:
                 usage_count INT DEFAULT 0,
                 last_used_at TIMESTAMP
             )
-        """)
+        """))
 
-        await conn.execute("""
+        await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS ccv_synonyms (
                 id UUID PRIMARY KEY,
                 term_id UUID NOT NULL REFERENCES ccv_terms(id) ON DELETE CASCADE,
@@ -61,9 +62,9 @@ async def init_db() -> None:
                 created_at TIMESTAMP NOT NULL DEFAULT NOW(),
                 created_by UUID
             )
-        """)
+        """))
 
-        await conn.execute("""
+        await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS ccv_relationships (
                 id UUID PRIMARY KEY,
                 source_term_id UUID NOT NULL REFERENCES ccv_terms(id) ON DELETE CASCADE,
@@ -73,9 +74,9 @@ async def init_db() -> None:
                 created_at TIMESTAMP NOT NULL DEFAULT NOW(),
                 created_by UUID
             )
-        """)
+        """))
 
-        await conn.execute("""
+        await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS ccv_suggestions (
                 id UUID PRIMARY KEY,
                 suggestion_type VARCHAR(50) NOT NULL,
@@ -96,9 +97,9 @@ async def init_db() -> None:
                 reviewed_by UUID,
                 review_notes TEXT
             )
-        """)
+        """))
 
-        await conn.execute("""
+        await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS ccv_data_source_mappings (
                 id UUID PRIMARY KEY,
                 term_id UUID NOT NULL REFERENCES ccv_terms(id) ON DELETE CASCADE,
@@ -109,10 +110,10 @@ async def init_db() -> None:
                 is_auto_mapped BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP NOT NULL DEFAULT NOW()
             )
-        """)
+        """))
 
         # Create indexes
-        await conn.execute("""
+        await conn.execute(text("""
             CREATE INDEX IF NOT EXISTS idx_ccv_terms_canonical ON ccv_terms(canonical_name);
             CREATE INDEX IF NOT EXISTS idx_ccv_terms_domain ON ccv_terms(domain);
             CREATE INDEX IF NOT EXISTS idx_ccv_terms_parent ON ccv_terms(parent_id);
@@ -121,13 +122,13 @@ async def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_ccv_synonyms_synonym ON ccv_synonyms(synonym);
             CREATE INDEX IF NOT EXISTS idx_ccv_suggestions_status ON ccv_suggestions(status);
             CREATE INDEX IF NOT EXISTS idx_ccv_mappings_source ON ccv_data_source_mappings(data_source_id);
-        """)
+        """))
 
         # Full-text search index
-        await conn.execute("""
+        await conn.execute(text("""
             CREATE INDEX IF NOT EXISTS idx_ccv_terms_search
             ON ccv_terms USING gin(to_tsvector('english', canonical_name || ' ' || COALESCE(definition, '')));
-        """)
+        """))
 
     logger.info("Database initialized")
 
