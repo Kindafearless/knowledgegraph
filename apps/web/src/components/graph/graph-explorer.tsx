@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -47,9 +47,19 @@ export function GraphExplorer() {
     showMinimap,
     expandNode,
     isLoading,
+    searchAndVisualize,
   } = useGraphStore();
 
   const { fitView } = useReactFlow();
+  const hasInitialized = useRef(false);
+
+  // Auto-load entities on mount
+  useEffect(() => {
+    if (!hasInitialized.current && nodes.length === 0 && !isLoading) {
+      hasInitialized.current = true;
+      searchAndVisualize('*');
+    }
+  }, [nodes.length, isLoading, searchAndVisualize]);
 
   // Auto-fit view when nodes change significantly
   useEffect(() => {
