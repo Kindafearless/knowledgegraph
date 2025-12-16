@@ -16,20 +16,26 @@ import { EntityNode } from './nodes/entity-node';
 import { GraphControls } from './graph-controls';
 import { NodeDetailsPanel } from './node-details-panel';
 
-const nodeTypes = {
+// Define node types outside component to prevent recreation on re-render
+// Using Object.freeze to ensure referential stability during HMR
+const NODE_TYPES = Object.freeze({
   entity: EntityNode,
   concept: EntityNode,
   document: EntityNode,
   person: EntityNode,
   organization: EntityNode,
-};
+});
 
-const defaultEdgeOptions = {
+const DEFAULT_EDGE_OPTIONS = Object.freeze({
   animated: false,
   style: { strokeWidth: 2 },
-};
+});
 
 export function GraphExplorer() {
+  // Memoize to ensure stable reference even during hot module reloading
+  const nodeTypes = useMemo(() => NODE_TYPES, []);
+  const defaultEdgeOptions = useMemo(() => DEFAULT_EDGE_OPTIONS, []);
+
   const {
     nodes,
     edges,
